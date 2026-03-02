@@ -21,25 +21,10 @@ steps:
       - --all-tags
       - $_REGION-docker.pkg.dev/$PROJECT_ID/productpulse/web
 
-  # ── 3. Run DB migrations ─────────────────────────────────────────────────────
-  # Runs `prisma migrate deploy` as a Cloud Run Job before deploying the new
-  # service revision, so the schema is always up to date first.
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
-    id: migrate
-    waitFor: [push]
-    entrypoint: gcloud
-    args:
-      - run
-      - jobs
-      - execute
-      - productpulse-migrate
-      - --region=$_REGION
-      - --wait
-
-  # ── 4. Deploy to Cloud Run ───────────────────────────────────────────────────
+  # ── 3. Deploy to Cloud Run ───────────────────────────────────────────────────
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: deploy
-    waitFor: [migrate]
+    waitFor: [push]
     entrypoint: gcloud
     args:
       - run
