@@ -11,9 +11,8 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 # @productpulse/web and its workspace dependencies.
 FROM base AS pruner
 WORKDIR /app
-RUN pnpm add -g turbo@^2
 COPY . .
-RUN turbo prune @productpulse/web --docker
+RUN npx --yes turbo@2 prune @productpulse/web --docker
 
 # ─── Stage 2: Install dependencies ───────────────────────────────────────────
 FROM base AS installer
