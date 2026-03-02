@@ -19,6 +19,7 @@ WORKDIR /app
 COPY --from=installer /app/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Firebase public config — must be baked into the bundle at build time
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
