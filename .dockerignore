@@ -1,0 +1,32 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (will be installed fresh in Docker)
+node_modules
+**/node_modules
+
+# Build outputs
+.next
+**/dist
+**/.turbo
+
+# Environment files — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Dev tooling
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

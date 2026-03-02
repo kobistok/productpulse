@@ -1,0 +1,37 @@
+# Cloud Run Job that runs DB migrations before each deployment.
+# Deploy once: gcloud run jobs replace infra/cloudrun/migrate-job.yaml
+#
+# Replace: PROJECT_ID, REGION, IMAGE_TAG
+
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: productpulse-migrate
+spec:
+  template:
+    spec:
+      template:
+        metadata:
+          annotations:
+            run.googleapis.com/cloudsql-instances: PROJECT_ID:REGION:productpulse-db
+            run.googleapis.com/execution-environment: gen2
+        spec:
+          serviceAccountName: productpulse-sa@PROJECT_ID.iam.gserviceaccount.com
+          restartPolicy: Never
+          containers:
+            - image: REGION-docker.pkg.dev/PROJECT_ID/productpulse/web:IMAGE_TAG
+              command: ["node"]
+              args: ["-e", "require('./apps/web/node_modules/.prisma/client'); process.exit(0)"]
+              # Override: run prisma migrate deploy using the bundled CLI
+              command: ["npx"]
+              args: ["prisma", "migrate", "deploy", "--schema=apps/web/node_modules/@productpulse/db/prisma/schema.prisma"]
+              resources:
+                limits:
+                  memory: 256Mi
+                  cpu: "1"
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: productpulse-database-url
+                      key: latest

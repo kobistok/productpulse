@@ -1,0 +1,134 @@
+generator client {
+  provider      = "prisma-client-js"
+  // linux-musl-openssl-3.0.x is required for Alpine-based Docker images (Cloud Run)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model Organization {
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  memberships      Membership[]
+  productLines     ProductLine[]
+  invites          Invite[]
+  dashboardInvites DashboardInvite[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model User {
+  id          String       @id // Firebase UID
+  email       String       @unique
+  name        String?
+  avatarUrl   String?
+  memberships Membership[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Membership {
+  id        String       @id @default(cuid())
+  userId    String
+  orgId     String
+  role      Role         @default(MEMBER)
+  user      User         @relation(fields: [userId], references: [id])
+  org       Organization @relation(fields: [orgId], references: [id])
+  createdAt DateTime     @default(now())
+
+  @@unique([userId, orgId])
+}
+
+// Team invite — admin generates a link, shares it however they want
+model Invite {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  role      Role         @default(MEMBER)
+  token     String       @unique @default(cuid())
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdBy String // userId of admin who generated it
+  createdAt DateTime     @default(now())
+}
+
+model ProductLine {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  name        String
+  description String?
+  slug        String
+  agent       Agent?
+  gitTriggers GitTrigger[]
+  updates     Update[]
+  createdBy   String // userId
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([orgId, slug])
+}
+
+// 1 agent per product line — owned by the user who created it
+model Agent {
+  id            String      @id @default(cuid())
+  productLineId String      @unique
+  productLine   ProductLine @relation(fields: [productLineId], references: [id])
+  systemPrompt  String      @db.Text
+  model         String      @default("claude-sonnet-4-6")
+  ownerId       String // userId — the "manager" of this agent
+  createdBy     String // userId
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model GitTrigger {
+  id            String      @id @default(cuid())
+  productLineId String
+  productLine   ProductLine @relation(fields: [productLineId], references: [id])
+  webhookSecret String // HMAC secret for verifying push payloads
+  repoUrl       String?
+  branchFilter  String? // e.g. "main", "release/*"
+  pathFilter    String? // e.g. "src/payments/**"
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// One update per product line per ISO week (upserted by agent)
+model Update {
+  id            String      @id @default(cuid())
+  productLineId String
+  productLine   ProductLine @relation(fields: [productLineId], references: [id])
+  isoWeek       Int // 1–53
+  year          Int
+  content       String      @db.Text // markdown
+  commitShas    String[]
+  diffSummary   String?     @db.Text
+  agentId       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([productLineId, isoWeek, year])
+}
+
+// Shareable read-only dashboard link (no login required)
+model DashboardInvite {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  token     String       @unique @default(cuid())
+  label     String? // friendly name e.g. "Investors", "Board"
+  expiresAt DateTime?
+  createdBy String // userId
+  createdAt DateTime     @default(now())
+}

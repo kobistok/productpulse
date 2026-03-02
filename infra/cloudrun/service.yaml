@@ -1,0 +1,84 @@
+# Cloud Run service definition — declarative reference.
+# Used for: gcloud run services replace infra/cloudrun/service.yaml
+#
+# Replace all occurrences of:
+#   PROJECT_ID   → your GCP project ID
+#   REGION       → e.g. us-central1
+#   IMAGE_TAG    → image digest or tag (set by CI)
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: productpulse
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale to zero when idle; burst up to 10 instances
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        # Cloud SQL socket injection
+        run.googleapis.com/cloudsql-instances: PROJECT_ID:REGION:productpulse-db
+        # CPU always allocated (avoids cold-start latency on first request)
+        run.googleapis.com/cpu-throttling: "false"
+        # Use 2nd gen execution environment (better networking, full CPU)
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      serviceAccountName: productpulse-sa@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 60
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/productpulse/web:IMAGE_TAG
+          ports:
+            - name: http1
+              containerPort: 3000
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: GCP_PROJECT_ID
+              value: PROJECT_ID
+            - name: GCP_LOCATION
+              value: REGION
+            - name: CLOUD_TASKS_QUEUE
+              value: agent-jobs
+            - name: FIREBASE_PROJECT_ID
+              value: PROJECT_ID
+            - name: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+              value: PROJECT_ID
+            - name: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+              value: PROJECT_ID.firebaseapp.com
+            # ── Secrets (fetched from Secret Manager at runtime) ─────────────
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: productpulse-database-url
+                  key: latest
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: productpulse-anthropic-key
+                  key: latest
+            - name: FIREBASE_CLIENT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: productpulse-firebase-client-email
+                  key: latest
+            - name: FIREBASE_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: productpulse-firebase-private-key
+                  key: latest
+            - name: WORKER_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: productpulse-worker-auth-token
+                  key: latest
+            # NEXT_PUBLIC_FIREBASE_API_KEY must be baked into the image at
+            # build time (Next.js inlines NEXT_PUBLIC_ vars). Pass it as a
+            # Cloud Build substitution during docker build, not here.
