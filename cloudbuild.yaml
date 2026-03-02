@@ -7,6 +7,9 @@ steps:
       - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/productpulse/web:$SHORT_SHA
       - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/productpulse/web:latest
       - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/productpulse/web:latest
+      - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=$_NEXT_PUBLIC_FIREBASE_API_KEY
+      - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$PROJECT_ID.firebaseapp.com
+      - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=$PROJECT_ID
       - .
 
   # ── 2. Push to Artifact Registry ────────────────────────────────────────────
@@ -60,6 +63,7 @@ steps:
 substitutions:
   _REGION: us-central1
   _CLOUDSQL_INSTANCE: productpulse-db
+  _NEXT_PUBLIC_FIREBASE_API_KEY: ""
 
 images:
   - $_REGION-docker.pkg.dev/$PROJECT_ID/productpulse/web:$SHORT_SHA

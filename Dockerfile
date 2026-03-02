@@ -37,6 +37,14 @@ COPY --from=pruner /app/out/full/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Firebase public config — baked into the Next.js bundle at build time
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+
 # Build Next.js (turbo runs db:generate first via dependency graph)
 RUN pnpm turbo build --filter=@productpulse/web
 
