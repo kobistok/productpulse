@@ -3,8 +3,6 @@ import { prisma } from "@/lib/db";
 import { createHmac, timingSafeEqual } from "crypto";
 import { CloudTasksClient } from "@google-cloud/tasks";
 
-const tasksClient = new CloudTasksClient();
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ triggerId: string }> }
@@ -76,6 +74,7 @@ async function enqueueAgentJob(job: {
   const location = process.env.GCP_LOCATION ?? "us-central1";
   const queue = process.env.CLOUD_TASKS_QUEUE ?? "agent-jobs";
   const workerUrl = `${process.env.WORKER_URL}/api/worker/process`;
+  const tasksClient = new CloudTasksClient();
 
   await tasksClient.createTask({
     parent: tasksClient.queuePath(project, location, queue),
