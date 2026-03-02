@@ -11,7 +11,7 @@ FROM base AS installer
 WORKDIR /app
 COPY . .
 # Installs all workspace deps; postinstall in packages/db runs prisma generate
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # ─── Build ────────────────────────────────────────────────────────────────────
 FROM base AS builder
