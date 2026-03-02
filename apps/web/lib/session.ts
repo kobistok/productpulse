@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { adminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth } from "@/lib/firebase-admin";
 import { prisma } from "@/lib/db";
 import type { User, Membership, Organization } from "@productpulse/db";
 
@@ -15,7 +15,7 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!sessionCookie) return null;
 
   try {
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const decoded = await getAdminAuth().verifySessionCookie(sessionCookie, true);
     const user = await prisma.user.findUnique({
       where: { id: decoded.uid },
       include: { memberships: { include: { org: true } } },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth } from "@/lib/firebase-admin";
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await getAdminAuth().verifyIdToken(idToken);
 
     // Upsert user from Firebase token claims
     await prisma.user.upsert({
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, {
+    const sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
       expiresIn: SESSION_DURATION_MS,
     });
 
