@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
-import { notFound, headers } from "next/navigation";
+import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { TriggersClient } from "./triggers-client";
 
 interface Props {
