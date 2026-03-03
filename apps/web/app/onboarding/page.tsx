@@ -19,6 +19,12 @@ export default function OnboardingPage() {
       body: JSON.stringify({ name }),
     });
     if (res.ok) {
+      const org = await res.json();
+      (window as any).pendo?.track("workspace_created", {
+        org_name: name,
+        org_id: org.id,
+        org_slug: org.slug,
+      });
       router.push("/product-lines");
       router.refresh();
     } else {

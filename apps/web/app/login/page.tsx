@@ -20,6 +20,11 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       });
       if (!res.ok) throw new Error("Session creation failed");
+      const session = await res.json();
+      (window as any).pendo?.track("user_signed_in", {
+        auth_provider: "google",
+        is_new_user: session.isNewUser ?? false,
+      });
       router.push("/product-lines");
       router.refresh();
     } catch {

@@ -26,6 +26,12 @@ export default function NewProductLinePage() {
     });
     if (res.ok) {
       const pl = await res.json();
+      (window as any).pendo?.track("product_line_created", {
+        product_line_id: pl.id,
+        product_line_name: name,
+        has_description: Boolean(description.trim()),
+        org_id: pl.orgId,
+      });
       router.push(`/product-lines/${pl.id}/agent`);
     } else {
       const body = await res.json();

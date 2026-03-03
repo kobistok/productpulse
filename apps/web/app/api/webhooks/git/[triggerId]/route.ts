@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { pendoTrackServer } from "@/lib/pendo";
 import { createHmac, timingSafeEqual } from "crypto";
 import { CloudTasksClient } from "@google-cloud/tasks";
 
@@ -40,6 +41,24 @@ export async function POST(
     productLineId: trigger.productLineId,
     orgId: trigger.productLine.orgId,
     payload,
+  });
+
+  const branch = (payload.ref as string)?.replace("refs/heads/", "") ?? "unknown";
+  const repo = (payload.repository as { full_name?: string })?.full_name ?? "unknown";
+  const commitCount = Array.isArray(payload.commits) ? payload.commits.length : 0;
+
+  await pendoTrackServer({
+    event: "webhook_received",
+    visitorId: "system",
+    accountId: trigger.productLine.orgId,
+    properties: {
+      trigger_id: triggerId,
+      product_line_id: trigger.productLineId,
+      org_id: trigger.productLine.orgId,
+      repo,
+      branch,
+      commit_count: commitCount,
+    },
   });
 
   return NextResponse.json({ queued: true });

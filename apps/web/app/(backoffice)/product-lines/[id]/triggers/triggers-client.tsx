@@ -35,6 +35,19 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
     });
     if (res.ok) {
       const trigger = await res.json();
+      (window as any).pendo?.track("git_trigger_created", {
+        product_line_id: productLineId,
+        trigger_id: trigger.id,
+        has_repo_url: Boolean(repoUrl.trim()),
+        branch_filter: branchFilter || "none",
+        has_path_filter: Boolean(pathFilter.trim()),
+      });
+      // Track onboarding_completed when the first trigger is created
+      if (triggers.length === 0) {
+        (window as any).pendo?.track("onboarding_completed", {
+          product_line_id: productLineId,
+        });
+      }
       setTriggers((prev) => [...prev, trigger]);
       setShowForm(false);
       setRepoUrl("");
@@ -56,6 +69,12 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
     );
     if (res.ok) {
       const updated = await res.json();
+      (window as any).pendo?.track("git_trigger_toggled", {
+        product_line_id: productLineId,
+        trigger_id: trigger.id,
+        new_active_state: !trigger.active,
+        repo_url: trigger.repoUrl || "",
+      });
       setTriggers((prev) => prev.map((t) => (t.id === trigger.id ? updated : t)));
     }
     setToggling(null);
@@ -68,6 +87,10 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
       { method: "DELETE" }
     );
     if (res.ok) {
+      (window as any).pendo?.track("git_trigger_deleted", {
+        product_line_id: productLineId,
+        trigger_id: triggerId,
+      });
       setTriggers((prev) => prev.filter((t) => t.id !== triggerId));
     }
     setDeleting(null);
