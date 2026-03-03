@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { pendoTrackServer } from "@/lib/pendo";
 import { runProductPulseAgent } from "@productpulse/agent";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 
@@ -80,6 +81,35 @@ export async function POST(request: NextRequest) {
         },
       });
       created.push(output.productLineId);
+
+      await pendoTrackServer({
+        event: "product_update_generated",
+        visitorId: "system",
+        accountId: orgId,
+        properties: {
+          product_line_id: output.productLineId,
+          org_id: orgId,
+          iso_week: isoWeek,
+          year,
+          commit_count: gitEvent.commits.length,
+          content_length: output.content.length,
+          repo: gitEvent.repo,
+          branch: gitEvent.branch,
+        },
+      });
+    } else if (output.decision === "skipped") {
+      await pendoTrackServer({
+        event: "product_update_skipped",
+        visitorId: "system",
+        accountId: orgId,
+        properties: {
+          product_line_id: output.productLineId,
+          org_id: orgId,
+          commit_count: gitEvent.commits.length,
+          repo: gitEvent.repo,
+          branch: gitEvent.branch,
+        },
+      });
     }
   }
 

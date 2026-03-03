@@ -24,6 +24,12 @@ export function InviteSection({ orgId, invites: initialInvites }: Props) {
     });
     if (res.ok) {
       const invite = await res.json();
+      (window as any).pendo?.track("team_invite_generated", {
+        org_id: orgId,
+        invite_id: invite.id,
+        role: invite.role || "member",
+        expires_at: invite.expiresAt,
+      });
       setInvites((prev) => [invite, ...prev]);
     }
     setGenerating(false);
