@@ -124,7 +124,7 @@ async function fetchCircleCIContext(
       `https://circleci.com/api/v2/project/${config.projectSlug}/pipeline?branch=${encodeURIComponent(config.branch)}`,
       { headers: { "Circle-Token": config.apiToken } }
     );
-    if (!res.ok) return null;
+    if (!res.ok) return undefined;
 
     type Pipeline = { vcs?: { revision?: string }; created_at?: string; status?: string };
     const data = (await res.json()) as { items?: Pipeline[] };
@@ -146,7 +146,7 @@ async function fetchCircleCIContext(
       unreleasedCommitCount,
     };
   } catch {
-    return null;
+    return undefined;
   }
 }
 
