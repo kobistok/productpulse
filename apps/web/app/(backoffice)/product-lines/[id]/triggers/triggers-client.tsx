@@ -20,6 +20,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
   const [toggling, setToggling] = useState<string | null>(null);
 
   // New trigger form state
+  const [provider, setProvider] = useState<"GITHUB" | "GITLAB">("GITHUB");
   const [repoUrl, setRepoUrl] = useState("");
   const [branchFilter, setBranchFilter] = useState("main");
   const [pathFilter, setPathFilter] = useState("");
@@ -31,12 +32,13 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
     const res = await fetch(`/api/product-lines/${productLineId}/triggers`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoUrl, branchFilter, pathFilter }),
+      body: JSON.stringify({ provider, repoUrl, branchFilter, pathFilter }),
     });
     if (res.ok) {
       const trigger = await res.json();
       setTriggers((prev) => [...prev, trigger]);
       setShowForm(false);
+      setProvider("GITHUB");
       setRepoUrl("");
       setBranchFilter("main");
       setPathFilter("");
@@ -109,6 +111,26 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
           className="bg-zinc-50 border border-zinc-200 rounded-xl p-5 space-y-4"
         >
           <p className="text-sm font-medium text-zinc-900">New Trigger</p>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Provider</label>
+            <div className="flex gap-2">
+              {(["GITHUB", "GITLAB"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProvider(p)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                    provider === p
+                      ? "bg-zinc-900 text-white border-zinc-900"
+                      : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                  }`}
+                >
+                  {p === "GITHUB" ? "GitHub" : "GitLab"}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-600">
@@ -235,11 +257,16 @@ function TriggerCard({
         </button>
 
         <div className="flex-1 min-w-0">
-          {trigger.repoUrl ? (
-            <p className="text-sm font-medium text-zinc-900 truncate">{trigger.repoUrl}</p>
-          ) : (
-            <p className="text-sm font-medium text-zinc-500 italic">No repo specified</p>
-          )}
+          <div className="flex items-center gap-2">
+            {trigger.repoUrl ? (
+              <p className="text-sm font-medium text-zinc-900 truncate">{trigger.repoUrl}</p>
+            ) : (
+              <p className="text-sm font-medium text-zinc-500 italic">No repo specified</p>
+            )}
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 shrink-0">
+              {trigger.provider ?? "GITHUB"}
+            </span>
+          </div>
           <div className="flex items-center gap-3 mt-0.5">
             {trigger.branchFilter && (
               <span className="text-xs text-zinc-400">branch: <code className="font-mono">{trigger.branchFilter}</code></span>
@@ -293,7 +320,9 @@ function TriggerCard({
           </div>
 
           <div>
-            <p className="text-xs font-medium text-zinc-600 mb-1.5">Webhook Secret (HMAC)</p>
+            <p className="text-xs font-medium text-zinc-600 mb-1.5">
+              {(trigger.provider ?? "GITHUB") === "GITLAB" ? "Secret Token" : "Webhook Secret (HMAC)"}
+            </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs font-mono bg-white border border-zinc-200 rounded-md px-3 py-2 text-zinc-700 truncate">
                 {trigger.webhookSecret}
@@ -311,8 +340,11 @@ function TriggerCard({
 
           <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
             <p className="text-xs text-amber-700">
-              In GitHub: go to repo Settings → Webhooks → Add webhook. Set Content type to{" "}
-              <code className="font-mono">application/json</code> and paste the secret above into the Secret field.
+              {(trigger.provider ?? "GITHUB") === "GITLAB" ? (
+                <>In GitLab: go to repo Settings → Webhooks → Add new webhook. Paste the URL above and the secret token into the <code className="font-mono">Secret token</code> field. Enable <em>Push events</em>.</>
+              ) : (
+                <>In GitHub: go to repo Settings → Webhooks → Add webhook. Set Content type to <code className="font-mono">application/json</code> and paste the secret above into the Secret field.</>
+              )}
             </p>
           </div>
         </div>

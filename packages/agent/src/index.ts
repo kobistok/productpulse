@@ -18,6 +18,24 @@ export interface AgentProductLine {
   recentUpdates: Array<{ content: string; isoWeek: number; year: number }>;
 }
 
+export interface CircleCIContext {
+  lastSuccessfulPipelineAt: string | null; // ISO date string
+  lastSuccessfulCommitSha: string | null;
+  unreleasedCommitCount: number | null;
+}
+
+export interface JiraTicket {
+  key: string;
+  summary: string;
+  status: string;
+  type: string;
+}
+
+export interface IntegrationContext {
+  circleCI?: CircleCIContext;
+  jira?: JiraTicket[];
+}
+
 export interface AgentOutput {
   productLineId: string;
   decision: "update_created" | "skipped";
@@ -27,7 +45,8 @@ export interface AgentOutput {
 
 export async function runProductPulseAgent(
   productLines: AgentProductLine[],
-  gitEvent: GitEvent
+  gitEvent: GitEvent,
+  integrationContext?: Record<string, IntegrationContext>
 ): Promise<AgentOutput[]> {
   const outputs: AgentOutput[] = [];
 
@@ -35,7 +54,7 @@ export async function runProductPulseAgent(
     const result = await generateText({
       model: anthropic("claude-sonnet-4-6"),
       system: productLine.systemPrompt,
-      prompt: buildPrompt(productLine, gitEvent),
+      prompt: buildPrompt(productLine, gitEvent, integrationContext?.[productLine.id]),
       tools: {
         create_update: tool({
           description:
@@ -92,7 +111,8 @@ export async function runProductPulseAgent(
 
 function buildPrompt(
   productLine: AgentProductLine,
-  gitEvent: GitEvent
+  gitEvent: GitEvent,
+  context?: IntegrationContext
 ): string {
   const recentUpdatesText =
     productLine.recentUpdates.length > 0
@@ -101,12 +121,28 @@ function buildPrompt(
           .join("\n\n")
       : "No recent updates yet.";
 
+  const circleCISection = context?.circleCI
+    ? `
+[CircleCI — Production Status]
+Last successful deploy: ${context.circleCI.lastSuccessfulPipelineAt ?? "unknown"} (commit ${context.circleCI.lastSuccessfulCommitSha?.slice(0, 7) ?? "unknown"})
+Commits not yet in production: ${context.circleCI.unreleasedCommitCount ?? "unknown"}
+`
+    : "";
+
+  const jiraSection =
+    context?.jira && context.jira.length > 0
+      ? `
+[Jira — Related Tickets]
+${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`).join("\n")}
+`
+      : "";
+
   return `You are the Product Pulse agent for the "${productLine.name}" product line.
 ${productLine.description ? `Description: ${productLine.description}` : ""}
 
 Recent updates for context:
 ${recentUpdatesText}
-
+${circleCISection}${jiraSection}
 A git push just happened:
 Repository: ${gitEvent.repo}
 Branch: ${gitEvent.branch}

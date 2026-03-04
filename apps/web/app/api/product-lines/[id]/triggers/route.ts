@@ -18,11 +18,12 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { repoUrl, branchFilter, pathFilter } = await request.json();
+  const { repoUrl, branchFilter, pathFilter, provider } = await request.json();
 
   const trigger = await prisma.gitTrigger.create({
     data: {
       productLineId: id,
+      provider: provider === "GITLAB" ? "GITLAB" : "GITHUB",
       webhookSecret: randomBytes(32).toString("hex"),
       repoUrl: repoUrl?.trim() || null,
       branchFilter: branchFilter?.trim() || null,

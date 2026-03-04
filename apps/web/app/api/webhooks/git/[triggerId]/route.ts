@@ -19,17 +19,27 @@ export async function POST(
     return NextResponse.json({ error: "Trigger not found" }, { status: 404 });
   }
 
-  // Verify GitHub HMAC signature
-  const signature = request.headers.get("x-hub-signature-256");
-  if (!verifySignature(body, trigger.webhookSecret, signature)) {
+  // Verify signature — GitHub uses HMAC-SHA256, GitLab uses a plain token
+  const verified =
+    trigger.provider === "GITLAB"
+      ? verifyGitLabToken(request, trigger.webhookSecret)
+      : verifyGitHubSignature(body, trigger.webhookSecret, request.headers.get("x-hub-signature-256"));
+
+  if (!verified) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   const payload = JSON.parse(body);
 
+  // Normalize to a common shape understood by the worker
+  const normalized =
+    trigger.provider === "GITLAB"
+      ? normalizeGitLabPayload(payload)
+      : payload;
+
   // Apply branch filter
   if (trigger.branchFilter) {
-    const branch = (payload.ref as string)?.replace("refs/heads/", "");
+    const branch = (normalized.ref as string)?.replace("refs/heads/", "");
     if (!matchesFilter(branch, trigger.branchFilter)) {
       return NextResponse.json({ skipped: "Branch filter did not match" });
     }
@@ -39,13 +49,13 @@ export async function POST(
     triggerId,
     productLineId: trigger.productLineId,
     orgId: trigger.productLine.orgId,
-    payload,
+    payload: normalized,
   });
 
   return NextResponse.json({ queued: true });
 }
 
-function verifySignature(
+function verifyGitHubSignature(
   body: string,
   secret: string,
   signature: string | null
@@ -56,6 +66,48 @@ function verifySignature(
   const b = Buffer.from(signature);
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
+}
+
+function verifyGitLabToken(request: NextRequest, secret: string): boolean {
+  const token = request.headers.get("x-gitlab-token");
+  if (!token) return false;
+  // Constant-time comparison
+  const a = Buffer.from(token);
+  const b = Buffer.from(secret);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+// Normalize a GitLab push payload to the same shape as GitHub's
+function normalizeGitLabPayload(payload: Record<string, unknown>) {
+  type GitLabCommit = {
+    id: string;
+    message: string;
+    author: { name: string };
+    added: string[];
+    modified: string[];
+    removed: string[];
+  };
+
+  const commits = ((payload.commits as GitLabCommit[]) ?? []).map((c) => ({
+    id: c.id,
+    message: c.message,
+    author: { name: c.author?.name ?? "unknown" },
+    added: c.added ?? [],
+    modified: c.modified ?? [],
+    removed: c.removed ?? [],
+  }));
+
+  const project = payload.project as { web_url?: string; path_with_namespace?: string } | undefined;
+
+  return {
+    ref: payload.ref,
+    repository: {
+      full_name: project?.path_with_namespace ?? "unknown",
+      html_url: project?.web_url ?? "",
+    },
+    commits,
+  };
 }
 
 function matchesFilter(value: string, filter: string): boolean {

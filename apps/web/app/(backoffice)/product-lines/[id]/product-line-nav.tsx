@@ -8,6 +8,7 @@ const TABS = [
   { label: "Overview", href: "" },
   { label: "Agent", href: "/agent" },
   { label: "Triggers", href: "/triggers" },
+  { label: "Integrations", href: "/integrations" },
 ];
 
 export function ProductLineNav({ id }: { id: string }) {
