@@ -12,17 +12,15 @@ export async function POST(request: NextRequest) {
   const job = await request.json();
   const { orgId, payload } = job;
 
-  const [productLines, jiraConfig] = await Promise.all([
-    prisma.productLine.findMany({
-      where: { orgId, agent: { isNot: null } },
-      include: {
-        agent: true,
-        updates: { orderBy: { createdAt: "desc" }, take: 4 },
-        circleCIConfig: true,
-      },
-    }),
-    prisma.jiraConfig.findUnique({ where: { orgId } }),
-  ]);
+  const productLines = await prisma.productLine.findMany({
+    where: { orgId, agent: { isNot: null } },
+    include: {
+      agent: true,
+      updates: { orderBy: { createdAt: "desc" }, take: 4 },
+      circleCIConfig: true,
+      jiraConfig: true,
+    },
+  });
 
   if (productLines.length === 0) {
     return NextResponse.json({ skipped: "No product lines with agents" });
@@ -40,11 +38,6 @@ export async function POST(request: NextRequest) {
     filesChanged: extractFilesChanged(payload),
   };
 
-  // Fetch Jira tickets referenced in commit messages (org-wide config)
-  const jiraTickets = jiraConfig
-    ? await fetchJiraTickets(jiraConfig, gitEvent.commits.map((c) => c.message))
-    : [];
-
   // Build per-product-line integration context
   const integrationContext: Record<string, IntegrationContext> = {};
   await Promise.all(
@@ -53,8 +46,9 @@ export async function POST(request: NextRequest) {
       if (pl.circleCIConfig) {
         ctx.circleCI = await fetchCircleCIContext(pl.circleCIConfig, gitEvent.commits.map((c) => c.sha));
       }
-      if (jiraTickets.length > 0) {
-        ctx.jira = jiraTickets;
+      if (pl.jiraConfig) {
+        const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message));
+        if (tickets.length > 0) ctx.jira = tickets;
       }
       if (ctx.circleCI || ctx.jira) {
         integrationContext[pl.id] = ctx;

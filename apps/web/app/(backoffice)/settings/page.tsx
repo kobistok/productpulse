@@ -2,7 +2,6 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { InviteSection } from "./invite-section";
 import { DashboardInviteSection } from "./dashboard-invite-section";
-import { JiraSection } from "./jira-section";
 
 export default async function SettingsPage() {
   const user = await requireSession();
@@ -11,11 +10,10 @@ export default async function SettingsPage() {
 
   if (!org) return null;
 
-  const [invites, dashboardInvites, members, jiraConfig] = await Promise.all([
+  const [invites, dashboardInvites, members] = await Promise.all([
     prisma.invite.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "desc" }, take: 20 }),
     prisma.dashboardInvite.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "desc" }, take: 20 }),
     prisma.membership.findMany({ where: { orgId: org.id }, include: { user: true }, orderBy: { createdAt: "asc" } }),
-    prisma.jiraConfig.findUnique({ where: { orgId: org.id } }),
   ]);
 
   const isAdmin = membership.role === "ADMIN";
@@ -59,12 +57,6 @@ export default async function SettingsPage() {
 
       {/* Dashboard Invites */}
       <DashboardInviteSection orgId={org.id} invites={dashboardInvites} />
-
-      {/* Integrations */}
-      <JiraSection
-        orgId={org.id}
-        existing={jiraConfig ? { baseUrl: jiraConfig.baseUrl, email: jiraConfig.email } : null}
-      />
     </div>
   );
 }

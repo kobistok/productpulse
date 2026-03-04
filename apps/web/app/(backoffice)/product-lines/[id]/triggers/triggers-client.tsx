@@ -341,7 +341,8 @@ function TriggerCard({
           <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
             <p className="text-xs text-amber-700">
               {(trigger.provider ?? "GITHUB") === "GITLAB" ? (
-                <>In GitLab: go to repo Settings → Webhooks → Add new webhook. Paste the URL above and the secret token into the <code className="font-mono">Secret token</code> field. Enable <em>Push events</em>.</>
+                <>In GitLab: go to your <strong>Group</strong> Settings → Webhooks → Add new webhook. Paste the URL above and the secret into the <code className="font-mono">Secret token</code> field. Enable <em>Merge request events</em> only. This will fire across all repos in the group when an MR is merged.</>
+
               ) : (
                 <>In GitHub: go to repo Settings → Webhooks → Add webhook. Set Content type to <code className="font-mono">application/json</code> and paste the secret above into the Secret field.</>
               )}

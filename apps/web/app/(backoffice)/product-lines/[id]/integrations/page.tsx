@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { CircleCISection } from "./circleci-section";
+import { JiraSection } from "./jira-section";
 
 export default async function IntegrationsPage({
   params,
@@ -14,7 +15,7 @@ export default async function IntegrationsPage({
 
   const productLine = await prisma.productLine.findFirst({
     where: { id, orgId },
-    include: { circleCIConfig: true },
+    include: { circleCIConfig: true, jiraConfig: true },
   });
 
   if (!productLine) notFound();
@@ -32,10 +33,16 @@ export default async function IntegrationsPage({
         productLineId={id}
         existing={
           productLine.circleCIConfig
-            ? {
-                projectSlug: productLine.circleCIConfig.projectSlug,
-                branch: productLine.circleCIConfig.branch,
-              }
+            ? { projectSlug: productLine.circleCIConfig.projectSlug, branch: productLine.circleCIConfig.branch }
+            : null
+        }
+      />
+
+      <JiraSection
+        productLineId={id}
+        existing={
+          productLine.jiraConfig
+            ? { baseUrl: productLine.jiraConfig.baseUrl, email: productLine.jiraConfig.email }
             : null
         }
       />
