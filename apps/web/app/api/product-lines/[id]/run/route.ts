@@ -25,13 +25,21 @@ export async function POST(
   const targetIsoWeek = getISOWeek(lastWeek);
   const targetYear = getISOWeekYear(lastWeek);
 
-  await enqueueAgentJob({
-    productLineId: productLine.id,
-    orgId: productLine.orgId,
-    payload: { ref: "refs/heads/main", repository: { full_name: "manual run" }, commits: [] },
-    targetIsoWeek,
-    targetYear,
-  });
+  try {
+    await enqueueAgentJob({
+      productLineId: productLine.id,
+      orgId: productLine.orgId,
+      payload: { ref: "refs/heads/main", repository: { full_name: "manual run" }, commits: [] },
+      targetIsoWeek,
+      targetYear,
+    });
+  } catch (err) {
+    console.error("[run] Failed to enqueue agent job:", err);
+    return NextResponse.json(
+      { error: "Failed to queue job", detail: (err as Error).message },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ queued: true, isoWeek: targetIsoWeek, year: targetYear });
 }
