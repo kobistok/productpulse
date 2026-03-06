@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
 
   const job = await request.json();
   const { orgId, productLineId, payload, targetIsoWeek, targetYear } = job;
+  console.log("[worker] job:", JSON.stringify({ orgId, productLineId, targetIsoWeek, targetYear }));
 
   const productLines = await prisma.productLine.findMany({
     where: { orgId, agent: { isNot: null }, ...(productLineId ? { id: productLineId } : {}) },
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  console.log("[worker] productLines found:", productLines.length);
   if (productLines.length === 0) {
     return NextResponse.json({ skipped: "No product lines with agents" });
   }
