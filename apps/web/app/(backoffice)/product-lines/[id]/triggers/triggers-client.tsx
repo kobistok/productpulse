@@ -301,15 +301,38 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
                   <StatusBadge status={ev.status} />
                 </td>
                 <td className="px-4 py-2.5 text-zinc-500 max-w-[240px]">
-                  <span className="truncate block" title={buildDetail(ev)}>
-                    {buildDetail(ev)}
-                  </span>
+                  <DetailCell detail={buildDetail(ev)} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function DetailCell({ detail }: { detail: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(detail);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (detail === "—") return <span className="text-zinc-300">—</span>;
+
+  return (
+    <div className="flex items-center gap-1.5 group">
+      <span className="truncate" title={detail}>{detail}</span>
+      <button
+        onClick={handleCopy}
+        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600"
+        title="Copy full detail"
+      >
+        {copied ? <Check size={10} className="text-green-600" /> : <Copy size={10} />}
+      </button>
     </div>
   );
 }
