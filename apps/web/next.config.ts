@@ -14,8 +14,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "@prisma/client",
     ".prisma",
-    "@google-cloud/tasks",
-    "firebase-admin",
+"firebase-admin",
   ],
 };
 

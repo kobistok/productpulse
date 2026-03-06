@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createHmac, timingSafeEqual } from "crypto";
-import { CloudTasksClient } from "@google-cloud/tasks";
 
 export async function POST(
   request: NextRequest,
@@ -180,20 +179,39 @@ async function enqueueAgentJob(job: {
   const location = process.env.GCP_LOCATION ?? "us-central1";
   const queue = process.env.CLOUD_TASKS_QUEUE ?? "agent-jobs";
   const workerUrl = `${process.env.WORKER_URL}/api/worker/process`;
-  const tasksClient = new CloudTasksClient();
 
-  await tasksClient.createTask({
-    parent: tasksClient.queuePath(project, location, queue),
-    task: {
-      httpRequest: {
-        httpMethod: "POST" as const,
-        url: workerUrl,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.WORKER_AUTH_TOKEN}`,
-        },
-        body: Buffer.from(JSON.stringify(job)).toString("base64"),
-      },
+  // Get access token from GCP metadata server (available on Cloud Run)
+  const tokenRes = await fetch(
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+    { headers: { "Metadata-Flavor": "Google" } }
+  );
+  if (!tokenRes.ok) throw new Error(`Metadata server error: ${tokenRes.status}`);
+  const { access_token } = await tokenRes.json() as { access_token: string };
+
+  const parent = `projects/${project}/locations/${location}/queues/${queue}`;
+  const res = await fetch(`https://cloudtasks.googleapis.com/v2/${parent}/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${access_token}`,
     },
+    body: JSON.stringify({
+      task: {
+        httpRequest: {
+          httpMethod: "POST",
+          url: workerUrl,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.WORKER_AUTH_TOKEN}`,
+          },
+          body: Buffer.from(JSON.stringify(job)).toString("base64"),
+        },
+      },
+    }),
   });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`Cloud Tasks API ${res.status}: ${detail}`);
+  }
 }
