@@ -7,6 +7,8 @@ import type { TriggerEvent, GitTrigger } from "@productpulse/db";
 
 export type TriggerEventWithTrigger = TriggerEvent & {
   trigger: Pick<GitTrigger, "repoUrl" | "provider"> | null;
+  agentDecision?: string | null;
+  workerDetail?: string | null;
 };
 
 interface Props {

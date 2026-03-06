@@ -10,12 +10,16 @@ function logEvent(
   detail?: string,
   repo?: string,
   branch?: string
-) {
-  prisma.triggerEvent
+): Promise<string> {
+  return prisma.triggerEvent
     .create({
       data: { productLineId, triggerId, source: "webhook", status, detail, repo, branch },
     })
-    .catch((err) => console.error("[webhook] Failed to write TriggerEvent:", err));
+    .then((ev) => ev.id)
+    .catch((err) => {
+      console.error("[webhook] Failed to write TriggerEvent:", err);
+      return "";
+    });
 }
 
 export async function POST(
@@ -57,16 +61,27 @@ export async function POST(
     // GitLab: only handle merged MR events; ignore everything else
     if (trigger.provider === "GITLAB") {
       const kind = payload.object_kind as string | undefined;
-      if (kind === "merge_request") {
-        const attrs = payload.object_attributes as Record<string, unknown> | undefined;
-        if (attrs?.state !== "merged") {
-          logEvent(trigger.productLineId, triggerId, "skipped", "MR not merged");
-          return NextResponse.json({ skipped: "MR not merged" });
-        }
-      }
+      const attrs = payload.object_attributes as Record<string, unknown> | undefined;
+
       if (kind !== "merge_request") {
-        logEvent(trigger.productLineId, triggerId, "skipped", `Not a merge_request event (got: ${kind})`);
+        logEvent(trigger.productLineId, triggerId, "skipped", `Not a merge_request event (got: ${kind ?? "unknown"})`);
         return NextResponse.json({ skipped: "Not a merge_request event" });
+      }
+
+      if (attrs?.state !== "merged") {
+        const mrTitle = attrs?.title as string | undefined;
+        const mrState = attrs?.state as string | undefined;
+        const mrSource = attrs?.source_branch as string | undefined;
+        const mrTarget = attrs?.target_branch as string | undefined;
+        const mrAuthor = (payload.user as Record<string, unknown> | undefined)?.name as string | undefined;
+        const detail = [
+          `MR "${mrTitle ?? "unknown"}"`,
+          mrAuthor ? `by ${mrAuthor}` : null,
+          `state: ${mrState ?? "unknown"}`,
+          mrSource && mrTarget ? `(${mrSource} → ${mrTarget})` : null,
+        ].filter(Boolean).join(" ");
+        logEvent(trigger.productLineId, triggerId, "skipped", detail);
+        return NextResponse.json({ skipped: "MR not merged" });
       }
     }
 
@@ -87,29 +102,34 @@ export async function POST(
       }
     }
 
+    const triggerEventId = await logEvent(trigger.productLineId, triggerId, "queued", undefined, repo, branch);
+
     try {
       await enqueueAgentJob({
         triggerId,
+        triggerEventId,
         productLineId: trigger.productLineId,
         orgId: trigger.productLine.orgId,
         payload: normalized,
       });
     } catch (err) {
       console.error("[webhook] Failed to enqueue agent job:", err);
-      logEvent(trigger.productLineId, triggerId, "failed", (err as Error).message, repo, branch);
+      // Update the event we already created to failed
+      prisma.triggerEvent.update({
+        where: { id: triggerEventId },
+        data: { status: "failed", detail: (err as Error).message },
+      }).catch(() => null);
       return NextResponse.json(
         { error: "Failed to queue job", detail: (err as Error).message },
         { status: 500 }
       );
     }
 
-    // Increment fire count + write success event (best-effort)
+    // Increment fire count (best-effort)
     prisma.gitTrigger.update({
       where: { id: triggerId },
       data: { fireCount: { increment: 1 } },
     }).catch((err) => console.error("[webhook] Failed to increment fireCount:", err));
-
-    logEvent(trigger.productLineId, triggerId, "queued", undefined, repo, branch);
 
     return NextResponse.json({ queued: true });
   } catch (err) {

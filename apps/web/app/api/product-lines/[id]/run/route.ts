@@ -25,8 +25,19 @@ export async function POST(
   const targetIsoWeek = getISOWeek(lastWeek);
   const targetYear = getISOWeekYear(lastWeek);
 
+  // Create the event upfront so we can update it with agent results later
+  const event = await prisma.triggerEvent.create({
+    data: {
+      productLineId: productLine.id,
+      source: "manual",
+      status: "queued",
+      detail: `Week ${targetIsoWeek}/${targetYear}`,
+    },
+  }).catch(() => null);
+
   try {
     await enqueueAgentJob({
+      triggerEventId: event?.id,
       productLineId: productLine.id,
       orgId: productLine.orgId,
       payload: { ref: "refs/heads/main", repository: { full_name: "manual run" }, commits: [] },
@@ -35,32 +46,17 @@ export async function POST(
     });
   } catch (err) {
     console.error("[run] Failed to enqueue agent job:", err);
-    prisma.triggerEvent
-      .create({
-        data: {
-          productLineId: productLine.id,
-          source: "manual",
-          status: "failed",
-          detail: (err as Error).message,
-        },
-      })
-      .catch(() => null);
+    if (event) {
+      prisma.triggerEvent.update({
+        where: { id: event.id },
+        data: { status: "failed", detail: (err as Error).message },
+      }).catch(() => null);
+    }
     return NextResponse.json(
       { error: "Failed to queue job", detail: (err as Error).message },
       { status: 500 }
     );
   }
-
-  prisma.triggerEvent
-    .create({
-      data: {
-        productLineId: productLine.id,
-        source: "manual",
-        status: "queued",
-        detail: `Week ${targetIsoWeek}/${targetYear}`,
-      },
-    })
-    .catch(() => null);
 
   return NextResponse.json({ queued: true, isoWeek: targetIsoWeek, year: targetYear });
 }

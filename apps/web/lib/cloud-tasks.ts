@@ -1,5 +1,6 @@
 export interface AgentJob {
   triggerId?: string;
+  triggerEventId?: string;
   productLineId: string;
   orgId: string;
   payload: unknown;

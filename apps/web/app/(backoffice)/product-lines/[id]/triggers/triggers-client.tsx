@@ -298,9 +298,12 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
                   )}
                 </td>
                 <td className="px-4 py-2.5 whitespace-nowrap">
-                  <StatusBadge status={ev.status} />
+                  <div className="flex flex-col gap-1">
+                    <StatusBadge status={ev.status} />
+                    {ev.agentDecision && <AgentBadge decision={ev.agentDecision} />}
+                  </div>
                 </td>
-                <td className="px-4 py-2.5 text-zinc-500 max-w-[240px]">
+                <td className="px-4 py-2.5 text-zinc-500 max-w-[280px]">
                   <DetailCell detail={buildDetail(ev)} />
                 </td>
               </tr>
@@ -363,7 +366,23 @@ function buildDetail(ev: TriggerEventWithTrigger): string {
   const parts: string[] = [];
   if (ev.branch) parts.push(`branch: ${ev.branch}`);
   if (ev.detail) parts.push(ev.detail);
+  if (ev.workerDetail) parts.push(ev.workerDetail);
   return parts.join(" · ") || "—";
+}
+
+function AgentBadge({ decision }: { decision: string }) {
+  if (decision === "update_created") {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+        update created
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-500 border border-zinc-200">
+      no update
+    </span>
+  );
 }
 
 function formatTime(date: Date | string): string {

@@ -10,8 +10,8 @@ export async function POST(request: NextRequest) {
   }
 
   const job = await request.json();
-  const { orgId, productLineId, payload, targetIsoWeek, targetYear } = job;
-  console.log("[worker] job:", JSON.stringify({ orgId, productLineId, targetIsoWeek, targetYear }));
+  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear } = job;
+  console.log("[worker] job:", JSON.stringify({ orgId, productLineId, triggerEventId, targetIsoWeek, targetYear }));
 
   const productLines = await prisma.productLine.findMany({
     where: { orgId, agent: { isNot: null }, ...(productLineId ? { id: productLineId } : {}) },
@@ -80,6 +80,37 @@ export async function POST(request: NextRequest) {
   const created: string[] = [];
 
   console.log("[worker] outputs:", JSON.stringify(outputs.map((o) => ({ id: o.productLineId, decision: o.decision }))));
+
+  // Build integration summary for the trigger event log
+  const integrationParts: string[] = [];
+  for (const pl of productLines) {
+    const ctx = integrationContext[pl.id];
+    if (ctx?.jira && ctx.jira.length > 0) {
+      integrationParts.push(`Jira: ${ctx.jira.map((t) => `${t.key} (${t.status})`).join(", ")}`);
+    }
+    if (ctx?.circleCI) {
+      const cci = ctx.circleCI;
+      integrationParts.push(
+        `CircleCI: last deploy ${cci.lastSuccessfulPipelineAt ? new Date(cci.lastSuccessfulPipelineAt).toLocaleDateString() : "unknown"}` +
+        (cci.unreleasedCommitCount != null ? `, ${cci.unreleasedCommitCount} unreleased commits` : "")
+      );
+    }
+  }
+
+  // Update trigger event with agent result
+  if (triggerEventId) {
+    const output = outputs[0];
+    const workerDetailParts: string[] = [];
+    if (integrationParts.length > 0) workerDetailParts.push(integrationParts.join(" · "));
+    if (output?.decision === "skipped" && output.skipReason) workerDetailParts.push(`Agent: ${output.skipReason}`);
+    prisma.triggerEvent.update({
+      where: { id: triggerEventId },
+      data: {
+        agentDecision: output?.decision ?? "skipped",
+        workerDetail: workerDetailParts.join(" · ") || null,
+      },
+    }).catch((err) => console.error("[worker] Failed to update TriggerEvent:", err));
+  }
 
   for (const output of outputs) {
     if (output.decision === "update_created" && output.content) {

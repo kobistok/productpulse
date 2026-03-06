@@ -127,6 +127,9 @@ model TriggerEvent {
   branch        String?
   createdAt     DateTime    @default(now())
 
+  agentDecision String?   // "update_created" | "skipped" — set by worker after agent runs
+  workerDetail  String?   // agent skip reason + integration summary — set by worker
+
   productLine   ProductLine @relation(fields: [productLineId], references: [id], onDelete: Cascade)
   trigger       GitTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
 }
