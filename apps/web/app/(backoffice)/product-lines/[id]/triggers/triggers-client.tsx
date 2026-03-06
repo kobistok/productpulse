@@ -3,21 +3,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap } from "lucide-react";
 import type { GitTrigger } from "@productpulse/db";
 
 interface Props {
   productLineId: string;
   triggers: GitTrigger[];
   appUrl: string;
+  hasAgent: boolean;
 }
 
-export function TriggersClient({ productLineId, triggers: initial, appUrl }: Props) {
+export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent }: Props) {
   const [triggers, setTriggers] = useState(initial);
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<"queued" | "error" | null>(null);
 
   // New trigger form state
   const [provider, setProvider] = useState<"GITHUB" | "GITLAB">("GITHUB");
@@ -75,6 +78,15 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
     setDeleting(null);
   }
 
+  async function handleRunLastWeek() {
+    setRunning(true);
+    setRunResult(null);
+    const res = await fetch(`/api/product-lines/${productLineId}/run`, { method: "POST" });
+    setRunResult(res.ok ? "queued" : "error");
+    setRunning(false);
+    setTimeout(() => setRunResult(null), 3000);
+  }
+
   async function copyText(text: string, key: string) {
     await navigator.clipboard.writeText(text);
     setCopied(key);
@@ -93,15 +105,36 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl }: Pro
             Add a webhook URL to your repo. On every push, the agent decides if there&apos;s something to report.
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowForm((v) => !v)}
-          className="gap-1.5 shrink-0"
-        >
-          <Plus size={13} />
-          Add Trigger
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasAgent && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRunLastWeek}
+              disabled={running}
+              className="gap-1.5"
+            >
+              {running ? (
+                <><Play size={13} className="animate-pulse" /> Running...</>
+              ) : runResult === "queued" ? (
+                <><Check size={13} className="text-green-600" /> Queued!</>
+              ) : runResult === "error" ? (
+                "Error"
+              ) : (
+                <><Zap size={13} /> Run Last Week</>
+              )}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowForm((v) => !v)}
+            className="gap-1.5 shrink-0"
+          >
+            <Plus size={13} />
+            Add Trigger
+          </Button>
+        </div>
       </div>
 
       {/* Create form */}
@@ -274,6 +307,12 @@ function TriggerCard({
             {trigger.pathFilter && (
               <span className="text-xs text-zinc-400">path: <code className="font-mono">{trigger.pathFilter}</code></span>
             )}
+            {trigger.fireCount > 0 && (
+              <span className="text-xs text-zinc-400 flex items-center gap-1">
+                <Zap size={10} className="text-zinc-400" />
+                {trigger.fireCount} {trigger.fireCount === 1 ? "trigger" : "triggers"}
+              </span>
+            )}
           </div>
         </div>
 
@@ -342,7 +381,6 @@ function TriggerCard({
             <p className="text-xs text-amber-700">
               {(trigger.provider ?? "GITHUB") === "GITLAB" ? (
                 <>In GitLab: go to your <strong>Group</strong> Settings → Webhooks → Add new webhook. Paste the URL above and the secret into the <code className="font-mono">Secret token</code> field. Enable <em>Merge request events</em> only. This will fire across all repos in the group when an MR is merged.</>
-
               ) : (
                 <>In GitHub: go to repo Settings → Webhooks → Add webhook. Set Content type to <code className="font-mono">application/json</code> and paste the secret above into the Secret field.</>
               )}

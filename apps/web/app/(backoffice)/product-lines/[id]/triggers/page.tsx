@@ -15,7 +15,7 @@ export default async function TriggersPage({ params }: Props) {
 
   const productLine = await prisma.productLine.findFirst({
     where: { id, orgId },
-    include: { gitTriggers: { orderBy: { createdAt: "asc" } } },
+    include: { gitTriggers: { orderBy: { createdAt: "asc" } }, agent: { select: { id: true } } },
   });
 
   if (!productLine) notFound();
@@ -31,6 +31,7 @@ export default async function TriggersPage({ params }: Props) {
       productLineId={id}
       triggers={productLine.gitTriggers}
       appUrl={appUrl}
+      hasAgent={!!productLine.agent}
     />
   );
 }

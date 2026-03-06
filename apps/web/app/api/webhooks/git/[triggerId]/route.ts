@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { enqueueAgentJob } from "@/lib/cloud-tasks";
 import { createHmac, timingSafeEqual } from "crypto";
 
 export async function POST(
@@ -45,7 +46,6 @@ export async function POST(
           return NextResponse.json({ skipped: "MR not merged" });
         }
       }
-      // Ignore non-MR events (push, tag, etc.) for GitLab group triggers
       if (kind !== "merge_request") {
         return NextResponse.json({ skipped: "Not a merge_request event" });
       }
@@ -79,6 +79,12 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    // Increment fire count (best-effort, don't fail the request if this errors)
+    prisma.gitTrigger.update({
+      where: { id: triggerId },
+      data: { fireCount: { increment: 1 } },
+    }).catch((err) => console.error("[webhook] Failed to increment fireCount:", err));
 
     return NextResponse.json({ queued: true });
   } catch (err) {
@@ -121,13 +127,11 @@ type GitLabCommit = {
   removed?: string[];
 };
 
-// Normalize a GitLab merge_request event to GitHub push shape
 function normalizeGitLabPayload(payload: Record<string, unknown>) {
   const attrs = payload.object_attributes as Record<string, unknown> | undefined;
   const project = payload.project as { web_url?: string; path_with_namespace?: string } | undefined;
   const targetBranch = (attrs?.target_branch as string) ?? "main";
 
-  // MR commits are in payload.commits; fall back to last_commit
   const rawCommits = (payload.commits as GitLabCommit[] | undefined) ?? [];
   const lastCommit = attrs?.last_commit as GitLabCommit | undefined;
   const commits =
@@ -167,51 +171,4 @@ function matchesFilter(value: string, filter: string): boolean {
   if (filter === value) return true;
   if (filter.endsWith("*")) return value.startsWith(filter.slice(0, -1));
   return false;
-}
-
-async function enqueueAgentJob(job: {
-  triggerId: string;
-  productLineId: string;
-  orgId: string;
-  payload: unknown;
-}) {
-  const project = process.env.GCP_PROJECT_ID!;
-  const location = process.env.GCP_LOCATION ?? "us-central1";
-  const queue = process.env.CLOUD_TASKS_QUEUE ?? "agent-jobs";
-  const workerUrl = `${process.env.WORKER_URL}/api/worker/process`;
-
-  // Get access token from GCP metadata server (available on Cloud Run)
-  const tokenRes = await fetch(
-    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
-    { headers: { "Metadata-Flavor": "Google" } }
-  );
-  if (!tokenRes.ok) throw new Error(`Metadata server error: ${tokenRes.status}`);
-  const { access_token } = await tokenRes.json() as { access_token: string };
-
-  const parent = `projects/${project}/locations/${location}/queues/${queue}`;
-  const res = await fetch(`https://cloudtasks.googleapis.com/v2/${parent}/tasks`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${access_token}`,
-    },
-    body: JSON.stringify({
-      task: {
-        httpRequest: {
-          httpMethod: "POST",
-          url: workerUrl,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.WORKER_AUTH_TOKEN}`,
-          },
-          body: Buffer.from(JSON.stringify(job)).toString("base64"),
-        },
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`Cloud Tasks API ${res.status}: ${detail}`);
-  }
 }

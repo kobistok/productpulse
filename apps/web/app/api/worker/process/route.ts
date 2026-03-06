@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
   }
 
   const job = await request.json();
-  const { orgId, payload } = job;
+  const { orgId, productLineId, payload, targetIsoWeek, targetYear } = job;
 
   const productLines = await prisma.productLine.findMany({
-    where: { orgId, agent: { isNot: null } },
+    where: { orgId, agent: { isNot: null }, ...(productLineId ? { id: productLineId } : {}) },
     include: {
       agent: true,
       updates: { orderBy: { createdAt: "desc" }, take: 4 },
@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
   );
 
   const now = new Date();
-  const isoWeek = getISOWeek(now);
-  const year = getISOWeekYear(now);
+  const isoWeek = targetIsoWeek ?? getISOWeek(now);
+  const year = targetYear ?? getISOWeekYear(now);
   const created: string[] = [];
 
   for (const output of outputs) {
