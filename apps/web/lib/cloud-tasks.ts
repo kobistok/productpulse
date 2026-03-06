@@ -18,7 +18,8 @@ export async function enqueueAgentJob(job: AgentJob): Promise<void> {
   const project = process.env.GCP_PROJECT_ID!;
   const location = process.env.GCP_LOCATION ?? "us-central1";
   const queue = process.env.CLOUD_TASKS_QUEUE ?? "agent-jobs";
-  const workerUrl = `${process.env.WORKER_URL}/api/worker/process`;
+  const baseUrl = (process.env.WORKER_URL ?? "").replace(/\/$/, "");
+  const workerUrl = baseUrl.startsWith("http") ? `${baseUrl}/api/worker/process` : `https://${baseUrl}/api/worker/process`;
 
   const res = await fetch(
     `https://cloudtasks.googleapis.com/v2/projects/${project}/locations/${location}/queues/${queue}/tasks`,
