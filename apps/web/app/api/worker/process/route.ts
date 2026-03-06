@@ -79,6 +79,8 @@ export async function POST(request: NextRequest) {
   const year = targetYear ?? getISOWeekYear(now);
   const created: string[] = [];
 
+  console.log("[worker] outputs:", JSON.stringify(outputs.map((o) => ({ id: o.productLineId, decision: o.decision }))));
+
   for (const output of outputs) {
     if (output.decision === "update_created" && output.content) {
       await prisma.update.upsert({
