@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap } from "lucide-react";
 import type { GitTrigger } from "@productpulse/db";
+import type { TriggerEventWithTrigger } from "./page";
 
 interface Props {
   productLineId: string;
   triggers: GitTrigger[];
   appUrl: string;
   hasAgent: boolean;
+  initialEvents: TriggerEventWithTrigger[];
 }
 
-export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent }: Props) {
+export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent, initialEvents }: Props) {
   const [triggers, setTriggers] = useState(initial);
+  const [events, setEvents] = useState<TriggerEventWithTrigger[]>(initialEvents);
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -85,6 +88,11 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
     setRunResult(res.ok ? "queued" : "error");
     setRunning(false);
     setTimeout(() => setRunResult(null), 3000);
+    // Refresh events after a short delay to include the new entry
+    setTimeout(async () => {
+      const evRes = await fetch(`/api/product-lines/${productLineId}/trigger-events`);
+      if (evRes.ok) setEvents(await evRes.json());
+    }, 1500);
   }
 
   async function copyText(text: string, key: string) {
@@ -245,9 +253,108 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
           ))}
         </div>
       )}
+
+      {/* Run log */}
+      <RunLog events={events} />
     </div>
   );
 }
+
+// ── Run Log ───────────────────────────────────────────────────────────────────
+
+function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
+  if (events.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
+      <div className="border border-zinc-200 rounded-xl overflow-hidden">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-zinc-50 border-b border-zinc-200">
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Time</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Source</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Status</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Details</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {events.map((ev) => (
+              <tr key={ev.id} className="bg-white hover:bg-zinc-50 transition-colors">
+                <td className="px-4 py-2.5 text-zinc-400 whitespace-nowrap font-mono">
+                  {formatTime(ev.createdAt)}
+                </td>
+                <td className="px-4 py-2.5 text-zinc-600 whitespace-nowrap">
+                  {ev.source === "manual" ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Zap size={10} className="text-zinc-400" /> Manual
+                    </span>
+                  ) : (
+                    <span className="truncate max-w-[120px] block" title={ev.trigger?.repoUrl ?? "Webhook"}>
+                      {ev.trigger?.repoUrl
+                        ? ev.trigger.repoUrl.replace(/^https?:\/\/(github|gitlab)\.com\//, "")
+                        : "Webhook"}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5 whitespace-nowrap">
+                  <StatusBadge status={ev.status} />
+                </td>
+                <td className="px-4 py-2.5 text-zinc-500 max-w-[240px]">
+                  <span className="truncate block" title={buildDetail(ev)}>
+                    {buildDetail(ev)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "queued") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200">
+        <Check size={9} /> queued
+      </span>
+    );
+  }
+  if (status === "skipped") {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-500 border border-zinc-200">
+        skipped
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-600 border border-red-200">
+      failed
+    </span>
+  );
+}
+
+function buildDetail(ev: TriggerEventWithTrigger): string {
+  const parts: string[] = [];
+  if (ev.branch) parts.push(`branch: ${ev.branch}`);
+  if (ev.detail) parts.push(ev.detail);
+  return parts.join(" · ") || "—";
+}
+
+function formatTime(date: Date | string): string {
+  const d = new Date(date);
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+// ── TriggerCard ───────────────────────────────────────────────────────────────
 
 interface TriggerCardProps {
   trigger: GitTrigger;

@@ -35,11 +35,32 @@ export async function POST(
     });
   } catch (err) {
     console.error("[run] Failed to enqueue agent job:", err);
+    prisma.triggerEvent
+      .create({
+        data: {
+          productLineId: productLine.id,
+          source: "manual",
+          status: "failed",
+          detail: (err as Error).message,
+        },
+      })
+      .catch(() => null);
     return NextResponse.json(
       { error: "Failed to queue job", detail: (err as Error).message },
       { status: 500 }
     );
   }
+
+  prisma.triggerEvent
+    .create({
+      data: {
+        productLineId: productLine.id,
+        source: "manual",
+        status: "queued",
+        detail: `Week ${targetIsoWeek}/${targetYear}`,
+      },
+    })
+    .catch(() => null);
 
   return NextResponse.json({ queued: true, isoWeek: targetIsoWeek, year: targetYear });
 }

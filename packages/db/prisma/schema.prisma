@@ -75,6 +75,7 @@ model ProductLine {
   slug           String
   agent          Agent?
   gitTriggers    GitTrigger[]
+  triggerEvents  TriggerEvent[]
   updates        Update[]
   circleCIConfig CircleCIConfig?
   jiraConfig     JiraConfig?
@@ -99,18 +100,35 @@ model Agent {
 }
 
 model GitTrigger {
-  id            String      @id @default(cuid())
+  id            String         @id @default(cuid())
   productLineId String
-  productLine   ProductLine @relation(fields: [productLineId], references: [id])
-  provider      GitProvider @default(GITHUB)
+  productLine   ProductLine    @relation(fields: [productLineId], references: [id])
+  provider      GitProvider    @default(GITHUB)
   webhookSecret String // HMAC secret for GitHub; plain token for GitLab
   repoUrl       String?
   branchFilter  String? // e.g. "main", "release/*"
   pathFilter    String? // e.g. "src/payments/**"
-  active        Boolean     @default(true)
-  fireCount     Int         @default(0)
+  active        Boolean        @default(true)
+  fireCount     Int            @default(0)
+  events        TriggerEvent[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// Log entry for every webhook hit or manual run
+model TriggerEvent {
+  id            String      @id @default(cuid())
+  productLineId String
+  triggerId     String? // null for manual runs
+  source        String // "webhook" | "manual"
+  status        String // "queued" | "skipped" | "failed"
+  detail        String? // skip reason or error message
+  repo          String?
+  branch        String?
   createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+
+  productLine   ProductLine @relation(fields: [productLineId], references: [id], onDelete: Cascade)
+  trigger       GitTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
 }
 
 model CircleCIConfig {

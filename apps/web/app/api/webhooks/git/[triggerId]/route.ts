@@ -3,6 +3,21 @@ import { prisma } from "@/lib/db";
 import { enqueueAgentJob } from "@/lib/cloud-tasks";
 import { createHmac, timingSafeEqual } from "crypto";
 
+function logEvent(
+  productLineId: string,
+  triggerId: string,
+  status: "queued" | "skipped" | "failed",
+  detail?: string,
+  repo?: string,
+  branch?: string
+) {
+  prisma.triggerEvent
+    .create({
+      data: { productLineId, triggerId, source: "webhook", status, detail, repo, branch },
+    })
+    .catch((err) => console.error("[webhook] Failed to write TriggerEvent:", err));
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ triggerId: string }> }
@@ -27,6 +42,7 @@ export async function POST(
         : verifyGitHubSignature(body, trigger.webhookSecret, request.headers.get("x-hub-signature-256"));
 
     if (!verified) {
+      logEvent(trigger.productLineId, triggerId, "failed", "Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
@@ -34,6 +50,7 @@ export async function POST(
     try {
       payload = JSON.parse(body) as Record<string, unknown>;
     } catch {
+      logEvent(trigger.productLineId, triggerId, "failed", "Invalid JSON body");
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -43,10 +60,12 @@ export async function POST(
       if (kind === "merge_request") {
         const attrs = payload.object_attributes as Record<string, unknown> | undefined;
         if (attrs?.state !== "merged") {
+          logEvent(trigger.productLineId, triggerId, "skipped", "MR not merged");
           return NextResponse.json({ skipped: "MR not merged" });
         }
       }
       if (kind !== "merge_request") {
+        logEvent(trigger.productLineId, triggerId, "skipped", `Not a merge_request event (got: ${kind})`);
         return NextResponse.json({ skipped: "Not a merge_request event" });
       }
     }
@@ -57,10 +76,13 @@ export async function POST(
         ? normalizeGitLabPayload(payload)
         : payload;
 
+    const repo = (normalized.repository as { full_name?: string })?.full_name;
+    const branch = (normalized.ref as string)?.replace("refs/heads/", "");
+
     // Apply branch filter (target branch for MRs, push branch for GitHub)
     if (trigger.branchFilter) {
-      const branch = (normalized.ref as string)?.replace("refs/heads/", "");
       if (!matchesFilter(branch, trigger.branchFilter)) {
+        logEvent(trigger.productLineId, triggerId, "skipped", `Branch "${branch}" did not match filter "${trigger.branchFilter}"`, repo, branch);
         return NextResponse.json({ skipped: "Branch filter did not match" });
       }
     }
@@ -74,17 +96,20 @@ export async function POST(
       });
     } catch (err) {
       console.error("[webhook] Failed to enqueue agent job:", err);
+      logEvent(trigger.productLineId, triggerId, "failed", (err as Error).message, repo, branch);
       return NextResponse.json(
         { error: "Failed to queue job", detail: (err as Error).message },
         { status: 500 }
       );
     }
 
-    // Increment fire count (best-effort, don't fail the request if this errors)
+    // Increment fire count + write success event (best-effort)
     prisma.gitTrigger.update({
       where: { id: triggerId },
       data: { fireCount: { increment: 1 } },
     }).catch((err) => console.error("[webhook] Failed to increment fireCount:", err));
+
+    logEvent(trigger.productLineId, triggerId, "queued", undefined, repo, branch);
 
     return NextResponse.json({ queued: true });
   } catch (err) {

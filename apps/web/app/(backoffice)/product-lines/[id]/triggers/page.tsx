@@ -3,6 +3,11 @@ import { requireSession } from "@/lib/session";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { TriggersClient } from "./triggers-client";
+import type { TriggerEvent, GitTrigger } from "@productpulse/db";
+
+export type TriggerEventWithTrigger = TriggerEvent & {
+  trigger: Pick<GitTrigger, "repoUrl" | "provider"> | null;
+};
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -15,7 +20,15 @@ export default async function TriggersPage({ params }: Props) {
 
   const productLine = await prisma.productLine.findFirst({
     where: { id, orgId },
-    include: { gitTriggers: { orderBy: { createdAt: "asc" } }, agent: { select: { id: true } } },
+    include: {
+      gitTriggers: { orderBy: { createdAt: "asc" } },
+      agent: { select: { id: true } },
+      triggerEvents: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        include: { trigger: { select: { repoUrl: true, provider: true } } },
+      },
+    },
   });
 
   if (!productLine) notFound();
@@ -32,6 +45,7 @@ export default async function TriggersPage({ params }: Props) {
       triggers={productLine.gitTriggers}
       appUrl={appUrl}
       hasAgent={!!productLine.agent}
+      initialEvents={productLine.triggerEvents as TriggerEventWithTrigger[]}
     />
   );
 }
