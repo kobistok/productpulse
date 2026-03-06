@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ProductLineNav } from "./product-line-nav";
+import { DeleteProductLineButton } from "./delete-button";
 
 interface Props {
   children: React.ReactNode;
@@ -30,11 +31,14 @@ export default async function ProductLineLayout({ children, params }: Props) {
         <ArrowLeft size={14} /> Product Lines
       </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-zinc-900">{productLine.name}</h1>
-        {productLine.description && (
-          <p className="text-sm text-zinc-500 mt-1">{productLine.description}</p>
-        )}
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900">{productLine.name}</h1>
+          {productLine.description && (
+            <p className="text-sm text-zinc-500 mt-1">{productLine.description}</p>
+          )}
+        </div>
+        <DeleteProductLineButton productLineId={id} productLineName={productLine.name} />
       </div>
 
       <ProductLineNav id={id} />

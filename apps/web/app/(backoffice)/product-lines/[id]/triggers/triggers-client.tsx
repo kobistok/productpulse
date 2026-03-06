@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap } from "lucide-react";
@@ -18,7 +18,27 @@ interface Props {
 export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent, initialEvents }: Props) {
   const [triggers, setTriggers] = useState(initial);
   const [events, setEvents] = useState<TriggerEventWithTrigger[]>(initialEvents);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  // Poll while any event is queued but has no agent decision yet
+  useEffect(() => {
+    const hasPending = events.some((e) => e.status === "queued" && !e.agentDecision);
+    if (!hasPending) {
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+      return;
+    }
+    if (pollingRef.current) return; // already polling
+    pollingRef.current = setInterval(async () => {
+      const res = await fetch(`/api/product-lines/${productLineId}/trigger-events`);
+      if (!res.ok) return;
+      const fresh: TriggerEventWithTrigger[] = await res.json();
+      setEvents(fresh);
+      const stillPending = fresh.some((e) => e.status === "queued" && !e.agentDecision);
+      if (!stillPending && pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+    }, 3000);
+    return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
+  }, [events, productLineId]);
   const [copied, setCopied] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -300,7 +320,15 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
                 <td className="px-4 py-2.5 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
                     <StatusBadge status={ev.status} />
-                    {ev.agentDecision && <AgentBadge decision={ev.agentDecision} />}
+                    {ev.agentDecision
+                      ? <AgentBadge decision={ev.agentDecision} />
+                      : ev.status === "queued" && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-zinc-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+                          agent running
+                        </span>
+                      )
+                    }
                   </div>
                 </td>
                 <td className="px-4 py-2.5 text-zinc-500 max-w-[280px]">
