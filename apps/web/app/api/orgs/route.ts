@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 
+export async function PATCH(request: NextRequest) {
+  const user = await requireSession();
+  const membership = user.memberships[0];
+  if (!membership || membership.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { name } = await request.json();
+  if (!name?.trim()) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  const org = await prisma.organization.update({
+    where: { id: membership.orgId },
+    data: { name: name.trim() },
+  });
+
+  return NextResponse.json(org);
+}
+
 export async function POST(request: NextRequest) {
   const user = await requireSession();
   const { name } = await request.json();

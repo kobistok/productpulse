@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { InviteSection } from "./invite-section";
 import { DashboardInviteSection } from "./dashboard-invite-section";
+import { OrgNameSection } from "./org-name-section";
 
 export default async function SettingsPage() {
   const user = await requireSession();
@@ -51,6 +52,9 @@ export default async function SettingsPage() {
           ))}
         </div>
       </section>
+
+      {/* Company name */}
+      {isAdmin && <OrgNameSection currentName={org.name} />}
 
       {/* Team Invites */}
       {isAdmin && <InviteSection orgId={org.id} invites={invites} />}
