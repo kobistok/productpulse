@@ -20,7 +20,7 @@ async function fetchUser(uid: string): Promise<SessionUser | null> {
 
 async function verifySessionCookie(cookieValue: string): Promise<string | null> {
   try {
-    const decoded = await getAdminAuth().verifySessionCookie(cookieValue, true);
+    const decoded = await getAdminAuth().verifySessionCookie(cookieValue, false);
     return decoded.uid;
   } catch {
     return null;

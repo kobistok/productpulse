@@ -22,8 +22,9 @@ export default function LoginPage() {
       if (!res.ok) throw new Error("Session creation failed");
       router.push("/product-lines");
       router.refresh();
-    } catch {
-      setError("Sign-in failed. Please try again.");
+    } catch (err) {
+      const msg = (err as { message?: string })?.message ?? "Sign-in failed. Please try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
