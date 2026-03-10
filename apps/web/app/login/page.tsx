@@ -19,12 +19,24 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
-      if (!res.ok) throw new Error("Session creation failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        // data.error can be a string (our API) or an object (Cloud Run native 429)
+        const errorMsg =
+          typeof data?.error === "string"
+            ? data.error
+            : (data?.error?.message ?? `Session creation failed (${res.status})`);
+        const err = Object.assign(new Error(errorMsg), { code: data?.code ?? String(res.status) });
+        throw err;
+      }
       router.push("/product-lines");
       router.refresh();
     } catch (err) {
-      const msg = (err as { message?: string })?.message ?? "Sign-in failed. Please try again.";
-      setError(msg);
+      console.error("Sign-in error:", err);
+      const e = err as { message?: string; code?: string };
+      const msg = e?.message ?? "Sign-in failed. Please try again.";
+      const code = e?.code ? ` [${e.code}]` : "";
+      setError(msg + code);
     } finally {
       setLoading(false);
     }
