@@ -289,12 +289,12 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
       <div className="border border-zinc-200 rounded-xl overflow-hidden">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs table-fixed">
           <thead>
             <tr className="bg-zinc-50 border-b border-zinc-200">
-              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Time</th>
-              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Source</th>
-              <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Status</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-32">Time</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-28">Source</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-28">Status</th>
               <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Details</th>
             </tr>
           </thead>
@@ -331,7 +331,7 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
                     }
                   </div>
                 </td>
-                <td className="px-4 py-2.5 text-zinc-500 max-w-[280px]">
+                <td className="px-4 py-2.5 text-zinc-500 w-full">
                   <DetailCell detail={buildDetail(ev)} />
                 </td>
               </tr>
@@ -355,11 +355,11 @@ function DetailCell({ detail }: { detail: string }) {
   if (detail === "—") return <span className="text-zinc-300">—</span>;
 
   return (
-    <div className="flex items-center gap-1.5 group">
-      <span className="truncate" title={detail}>{detail}</span>
+    <div className="flex items-start gap-1.5 group">
+      <span className="break-words whitespace-pre-wrap min-w-0">{detail}</span>
       <button
         onClick={handleCopy}
-        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600"
+        className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600"
         title="Copy full detail"
       >
         {copied ? <Check size={10} className="text-green-600" /> : <Copy size={10} />}

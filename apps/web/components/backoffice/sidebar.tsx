@@ -65,8 +65,14 @@ export function Sidebar({ user, org, isSuperAdmin, isImpersonating, realUserName
     <>
       <aside className="fixed left-0 top-0 h-full w-56 bg-white border-r border-zinc-200 flex flex-col">
         <div className="px-5 py-5 border-b border-zinc-100">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Product Pulse</p>
-          <p className="text-sm font-semibold text-zinc-900 mt-0.5 truncate">{org.name}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="w-5 h-5 shrink-0">
+              <rect width="32" height="32" rx="7" fill="#18181b"/>
+              <polyline points="2,16 7,16 9.5,9 13,23 16,7 19,23 22.5,9 25,16 30,16" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Product Pulse</p>
+          </div>
+          <p className="text-sm font-semibold text-zinc-900 truncate">{org.name}</p>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5">
