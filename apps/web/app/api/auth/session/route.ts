@@ -46,8 +46,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Session creation failed:", error);
-    return NextResponse.json({ error: "Invalid ID token" }, { status: 401 });
+    const msg = (error as { message?: string })?.message ?? "Unknown error";
+    const code = (error as { code?: string })?.code ?? "";
+    console.error("Session creation failed:", code, msg);
+    const status = msg.toLowerCase().includes("rate") || msg.toLowerCase().includes("quota") ? 429 : 401;
+    return NextResponse.json({ error: msg, code }, { status });
   }
 }
 
