@@ -27,7 +27,7 @@ export default async function TriggersPage({ params }: Props) {
       agent: { select: { id: true } },
       triggerEvents: {
         orderBy: { createdAt: "desc" },
-        take: 20,
+        take: 100,
         include: { trigger: { select: { repoUrl: true, provider: true } } },
       },
     },

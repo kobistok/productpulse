@@ -22,7 +22,7 @@ export async function GET(
   const events = await prisma.triggerEvent.findMany({
     where: { productLineId: id },
     orderBy: { createdAt: "desc" },
-    take: 20,
+    take: 100,
     include: { trigger: { select: { repoUrl: true, provider: true } } },
   });
 

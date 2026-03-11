@@ -282,60 +282,96 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
 
 // ── Run Log ───────────────────────────────────────────────────────────────────
 
+type LogFilter = "all" | "update" | "skipped";
+
 function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
+  const [filter, setFilter] = useState<LogFilter>("all");
+
   if (events.length === 0) return null;
+
+  const filtered =
+    filter === "all"
+      ? events
+      : filter === "update"
+      ? events.filter((e) => e.agentDecision === "update_created")
+      : events.filter(
+          (e) => e.status === "skipped" || (e.agentDecision && e.agentDecision !== "update_created")
+        );
+
+  const updateCount = events.filter((e) => e.agentDecision === "update_created").length;
+  const skippedCount = events.filter(
+    (e) => e.status === "skipped" || (e.agentDecision && e.agentDecision !== "update_created")
+  ).length;
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
+        <div className="flex items-center gap-1">
+          {(["all", "update", "skipped"] as LogFilter[]).map((f) => {
+            const label =
+              f === "all" ? `All (${events.length})` :
+              f === "update" ? `Updates (${updateCount})` :
+              `Skipped (${skippedCount})`;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                  filter === f
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="border border-zinc-200 rounded-xl overflow-hidden">
         <table className="w-full text-xs table-fixed">
           <thead>
             <tr className="bg-zinc-50 border-b border-zinc-200">
               <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-32">Time</th>
-              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-28">Source</th>
-              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-28">Status</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-44">Source</th>
+              <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-32">Status</th>
               <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Details</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {events.map((ev) => (
-              <tr key={ev.id} className="bg-white hover:bg-zinc-50 transition-colors">
-                <td className="px-4 py-2.5 text-zinc-400 whitespace-nowrap font-mono">
-                  {formatTime(ev.createdAt)}
-                </td>
-                <td className="px-4 py-2.5 text-zinc-600 whitespace-nowrap">
-                  {ev.source === "manual" ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Zap size={10} className="text-zinc-400" /> Manual
-                    </span>
-                  ) : (
-                    <span className="truncate max-w-[120px] block" title={ev.trigger?.repoUrl ?? "Webhook"}>
-                      {ev.trigger?.repoUrl
-                        ? ev.trigger.repoUrl.replace(/^https?:\/\/(github|gitlab)\.com\//, "")
-                        : "Webhook"}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 whitespace-nowrap">
-                  <div className="flex flex-col gap-1">
-                    <StatusBadge status={ev.status} />
-                    {ev.agentDecision
-                      ? <AgentBadge decision={ev.agentDecision} />
-                      : ev.status === "queued" && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-zinc-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
-                          agent running
-                        </span>
-                      )
-                    }
-                  </div>
-                </td>
-                <td className="px-4 py-2.5 text-zinc-500 w-full">
-                  <DetailCell detail={buildDetail(ev)} />
-                </td>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">No events match this filter.</td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((ev) => (
+                <tr key={ev.id} className="bg-white hover:bg-zinc-50 transition-colors">
+                  <td className="px-4 py-2.5 text-zinc-400 whitespace-nowrap font-mono">
+                    {formatTime(ev.createdAt)}
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-600">
+                    {ev.source === "manual" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Zap size={10} className="text-zinc-400" /> Manual
+                      </span>
+                    ) : (
+                      <span className="break-all">
+                        {ev.trigger?.repoUrl
+                          ? ev.trigger.repoUrl.replace(/^https?:\/\/(github|gitlab)\.com\//, "")
+                          : ev.trigger?.provider ?? "Webhook"}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <EventStatusBadge ev={ev} />
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-500 w-full">
+                    <DetailCell detail={buildDetail(ev)} />
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -368,24 +404,45 @@ function DetailCell({ detail }: { detail: string }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  if (status === "queued") {
+function EventStatusBadge({ ev }: { ev: TriggerEventWithTrigger }) {
+  if (ev.status === "failed") {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200">
-        <Check size={9} /> queued
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-600 border border-red-200">
+        Failed
       </span>
     );
   }
-  if (status === "skipped") {
+  if (ev.status === "skipped") {
+    // Filtered before reaching the agent (branch/path filter)
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-500 border border-zinc-200 cursor-help"
+        title={ev.detail ?? "Filtered out before the agent ran (branch or path filter)"}
+      >
+        Filtered
+      </span>
+    );
+  }
+  if (ev.agentDecision === "update_created") {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+        Update created
+      </span>
+    );
+  }
+  if (ev.agentDecision) {
+    // Agent ran but decided nothing was worth reporting
     return (
       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-500 border border-zinc-200">
-        skipped
+        No update
       </span>
     );
   }
+  // Queued — agent is still processing
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-600 border border-red-200">
-      failed
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+      Running…
     </span>
   );
 }
@@ -398,20 +455,6 @@ function buildDetail(ev: TriggerEventWithTrigger): string {
   return parts.join(" · ") || "—";
 }
 
-function AgentBadge({ decision }: { decision: string }) {
-  if (decision === "update_created") {
-    return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-        update created
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-500 border border-zinc-200">
-      no update
-    </span>
-  );
-}
 
 function formatTime(date: Date | string): string {
   const d = new Date(date);
