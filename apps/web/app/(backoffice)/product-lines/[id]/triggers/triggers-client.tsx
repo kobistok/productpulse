@@ -282,25 +282,26 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
 
 // ── Run Log ───────────────────────────────────────────────────────────────────
 
-type LogFilter = "all" | "update" | "skipped";
+type LogFilter = "all" | "update" | "no_update";
 
 function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
   const [filter, setFilter] = useState<LogFilter>("all");
 
-  if (events.length === 0) return null;
+  // Exclude branch/path filter mismatches — pure noise, not meaningful run outcomes
+  const meaningful = events.filter((e) => e.status !== "skipped");
+
+  if (meaningful.length === 0) return null;
 
   const filtered =
     filter === "all"
-      ? events
+      ? meaningful
       : filter === "update"
-      ? events.filter((e) => e.agentDecision === "update_created")
-      : events.filter(
-          (e) => e.status === "skipped" || (e.agentDecision && e.agentDecision !== "update_created")
-        );
+      ? meaningful.filter((e) => e.agentDecision === "update_created")
+      : meaningful.filter((e) => e.agentDecision && e.agentDecision !== "update_created");
 
-  const updateCount = events.filter((e) => e.agentDecision === "update_created").length;
-  const skippedCount = events.filter(
-    (e) => e.status === "skipped" || (e.agentDecision && e.agentDecision !== "update_created")
+  const updateCount = meaningful.filter((e) => e.agentDecision === "update_created").length;
+  const noUpdateCount = meaningful.filter(
+    (e) => e.agentDecision && e.agentDecision !== "update_created"
   ).length;
 
   return (
@@ -308,11 +309,11 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
         <div className="flex items-center gap-1">
-          {(["all", "update", "skipped"] as LogFilter[]).map((f) => {
+          {(["all", "update", "no_update"] as LogFilter[]).map((f) => {
             const label =
-              f === "all" ? `All (${events.length})` :
+              f === "all" ? `All (${meaningful.length})` :
               f === "update" ? `Updates (${updateCount})` :
-              `Skipped (${skippedCount})`;
+              `No update (${noUpdateCount})`;
             return (
               <button
                 key={f}
@@ -409,17 +410,6 @@ function EventStatusBadge({ ev }: { ev: TriggerEventWithTrigger }) {
     return (
       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-600 border border-red-200">
         Failed
-      </span>
-    );
-  }
-  if (ev.status === "skipped") {
-    // Filtered before reaching the agent (branch/path filter)
-    return (
-      <span
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-500 border border-zinc-200 cursor-help"
-        title={ev.detail ?? "Filtered out before the agent ran (branch or path filter)"}
-      >
-        Filtered
       </span>
     );
   }
