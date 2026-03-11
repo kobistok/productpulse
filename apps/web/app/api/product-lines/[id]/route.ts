@@ -12,11 +12,16 @@ export async function DELETE(
 
   const productLine = await prisma.productLine.findFirst({
     where: { id, orgId },
-    select: { id: true },
+    select: { id: true, createdBy: true },
   });
 
   if (!productLine) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const isAdmin = user.memberships[0]?.role === "ADMIN";
+  if (productLine.createdBy !== user.id && !isAdmin) {
+    return NextResponse.json({ error: "Only the product line creator or an admin can delete it" }, { status: 403 });
   }
 
   await prisma.productLine.delete({ where: { id } });

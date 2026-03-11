@@ -22,6 +22,9 @@ export default async function ProductLineLayout({ children, params }: Props) {
 
   if (!productLine) notFound();
 
+  const isAdmin = user.memberships[0]?.role === "ADMIN";
+  const canDelete = productLine.createdBy === user.id || isAdmin;
+
   return (
     <div>
       <Link
@@ -38,7 +41,7 @@ export default async function ProductLineLayout({ children, params }: Props) {
             <p className="text-sm text-zinc-500 mt-1">{productLine.description}</p>
           )}
         </div>
-        <DeleteProductLineButton productLineId={id} productLineName={productLine.name} />
+        {canDelete && <DeleteProductLineButton productLineId={id} productLineName={productLine.name} />}
       </div>
 
       <ProductLineNav id={id} />
