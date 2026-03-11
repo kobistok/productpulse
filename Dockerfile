@@ -16,6 +16,7 @@ RUN pnpm install --no-frozen-lockfile
 # ─── Build ────────────────────────────────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
+RUN apk add --no-cache openssl
 COPY --from=installer /app/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
