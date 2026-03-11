@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap } from "lucide-react";
@@ -20,6 +20,15 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
   const [events, setEvents] = useState<TriggerEventWithTrigger[]>(initialEvents);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  // Fetch enriched events on mount to populate updateContent
+  useEffect(() => {
+    fetch(`/api/product-lines/${productLineId}/trigger-events`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setEvents(data); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Poll while any event is queued but has no agent decision yet
   useEffect(() => {
@@ -286,6 +295,15 @@ type LogFilter = "all" | "update" | "no_update" | "failed";
 
 function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
   const [filter, setFilter] = useState<LogFilter>("all");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  function toggleRow(id: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   // Exclude branch/path filter mismatches — pure noise, not meaningful run outcomes
   const meaningful = events.filter((e) => e.status !== "skipped");
@@ -350,32 +368,58 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
                 <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">No events match this filter.</td>
               </tr>
             ) : (
-              filtered.map((ev) => (
-                <tr key={ev.id} className="bg-white hover:bg-zinc-50 transition-colors">
-                  <td className="px-4 py-2.5 text-zinc-400 whitespace-nowrap font-mono">
-                    {formatTime(ev.createdAt)}
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-600">
-                    {ev.source === "manual" ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Zap size={10} className="text-zinc-400" /> Manual
-                      </span>
-                    ) : (
-                      <span className="break-all">
-                        {ev.trigger?.repoUrl
-                          ? ev.trigger.repoUrl.replace(/^https?:\/\/(github|gitlab)\.com\//, "")
-                          : ev.trigger?.provider ?? "Webhook"}
-                      </span>
+              filtered.map((ev) => {
+                const isExpanded = expandedRows.has(ev.id);
+                const canExpand = ev.agentDecision === "update_created" && !!ev.updateContent;
+                return (
+                  <Fragment key={ev.id}>
+                    <tr className="bg-white hover:bg-zinc-50 transition-colors">
+                      <td className="px-4 py-2.5 text-zinc-400 whitespace-nowrap font-mono">
+                        {formatTime(ev.createdAt)}
+                      </td>
+                      <td className="px-4 py-2.5 text-zinc-600">
+                        {ev.source === "manual" ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Zap size={10} className="text-zinc-400" /> Manual
+                          </span>
+                        ) : (
+                          <span className="break-all">
+                            {ev.trigger?.repoUrl
+                              ? ev.trigger.repoUrl.replace(/^https?:\/\/(github|gitlab)\.com\//, "")
+                              : ev.trigger?.provider ?? "Webhook"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <EventStatusBadge ev={ev} />
+                          {canExpand && (
+                            <button
+                              onClick={() => toggleRow(ev.id)}
+                              className="text-blue-400 hover:text-blue-600 transition-colors"
+                              title={isExpanded ? "Hide update" : "Show update"}
+                            >
+                              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-zinc-500 w-full">
+                        <DetailCell detail={buildDetail(ev)} />
+                      </td>
+                    </tr>
+                    {isExpanded && ev.updateContent && (
+                      <tr className="bg-blue-50/40">
+                        <td colSpan={4} className="px-4 pb-4 pt-2 border-t border-blue-100">
+                          <pre className="whitespace-pre-wrap text-xs text-zinc-700 font-sans leading-relaxed max-h-72 overflow-y-auto">
+                            {ev.updateContent}
+                          </pre>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <EventStatusBadge ev={ev} />
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-500 w-full">
-                    <DetailCell detail={buildDetail(ev)} />
-                  </td>
-                </tr>
-              ))
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

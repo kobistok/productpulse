@@ -9,6 +9,7 @@ export type TriggerEventWithTrigger = TriggerEvent & {
   trigger: Pick<GitTrigger, "repoUrl" | "provider"> | null;
   agentDecision?: string | null;
   workerDetail?: string | null;
+  updateContent?: string | null;
 };
 
 interface Props {

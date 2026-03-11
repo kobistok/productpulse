@@ -25,9 +25,10 @@ interface Props {
   productLineId: string;
   productLineName: string;
   agent: Agent | null;
+  canEdit: boolean;
 }
 
-export function AgentForm({ productLineId, productLineName, agent }: Props) {
+export function AgentForm({ productLineId, productLineName, agent, canEdit }: Props) {
   const [systemPrompt, setSystemPrompt] = useState(
     agent?.systemPrompt ?? DEFAULT_SYSTEM_PROMPT
   );
@@ -79,6 +80,13 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
         )}
       </div>
 
+      {!canEdit && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
+          <Info size={12} className="mt-0.5 shrink-0" />
+          <p>You can view but not edit this agent. Only the agent creator and org admins can make changes.</p>
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="space-y-6">
         {/* Model selector */}
         <div className="space-y-2">
@@ -88,11 +96,12 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
               <button
                 key={m.value}
                 type="button"
-                onClick={() => setModel(m.value)}
-                className={`text-left px-3 py-3 rounded-lg border text-sm transition-colors ${
+                disabled={!canEdit}
+                onClick={() => canEdit && setModel(m.value)}
+                className={`text-left px-3 py-3 rounded-lg border text-sm transition-colors disabled:cursor-not-allowed ${
                   model === m.value
                     ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 disabled:hover:border-zinc-200"
                 }`}
               >
                 <p className="font-medium text-xs">{m.label}</p>
@@ -108,19 +117,22 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-zinc-700">System Prompt</label>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
-            >
-              Reset to default
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+              >
+                Reset to default
+              </button>
+            )}
           </div>
           <Textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={14}
-            className="font-mono text-xs leading-relaxed"
+            disabled={!canEdit}
+            className="font-mono text-xs leading-relaxed disabled:cursor-not-allowed disabled:opacity-70"
             placeholder="Describe how this agent should behave..."
           />
           <div className="flex items-start gap-1.5 text-xs text-zinc-400">
@@ -135,14 +147,16 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving} className="gap-2">
-            {saving ? "Saving..." : saved ? <><Check size={14} /> Saved</> : "Save Agent"}
-          </Button>
-          {!agent && (
-            <p className="text-xs text-zinc-400">Agent will activate once saved.</p>
-          )}
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={saving} className="gap-2">
+              {saving ? "Saving..." : saved ? <><Check size={14} /> Saved</> : "Save Agent"}
+            </Button>
+            {!agent && (
+              <p className="text-xs text-zinc-400">Agent will activate once saved.</p>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );
