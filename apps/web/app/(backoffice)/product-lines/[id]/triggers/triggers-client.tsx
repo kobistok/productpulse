@@ -282,7 +282,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
 
 // ── Run Log ───────────────────────────────────────────────────────────────────
 
-type LogFilter = "all" | "update" | "no_update";
+type LogFilter = "all" | "update" | "no_update" | "failed";
 
 function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
   const [filter, setFilter] = useState<LogFilter>("all");
@@ -297,23 +297,27 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
       ? meaningful
       : filter === "update"
       ? meaningful.filter((e) => e.agentDecision === "update_created")
-      : meaningful.filter((e) => e.agentDecision && e.agentDecision !== "update_created");
+      : filter === "no_update"
+      ? meaningful.filter((e) => e.agentDecision && e.agentDecision !== "update_created")
+      : meaningful.filter((e) => e.status === "failed");
 
   const updateCount = meaningful.filter((e) => e.agentDecision === "update_created").length;
   const noUpdateCount = meaningful.filter(
     (e) => e.agentDecision && e.agentDecision !== "update_created"
   ).length;
+  const failedCount = meaningful.filter((e) => e.status === "failed").length;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
         <div className="flex items-center gap-1">
-          {(["all", "update", "no_update"] as LogFilter[]).map((f) => {
+          {(["all", "update", "no_update", "failed"] as LogFilter[]).map((f) => {
             const label =
               f === "all" ? `All (${meaningful.length})` :
               f === "update" ? `Updates (${updateCount})` :
-              `No update (${noUpdateCount})`;
+              f === "no_update" ? `No update (${noUpdateCount})` :
+              `Failed (${failedCount})`;
             return (
               <button
                 key={f}
