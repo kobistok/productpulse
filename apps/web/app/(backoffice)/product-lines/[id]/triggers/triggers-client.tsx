@@ -439,7 +439,6 @@ function EventStatusBadge({ ev }: { ev: TriggerEventWithTrigger }) {
 
 function buildDetail(ev: TriggerEventWithTrigger): string {
   const parts: string[] = [];
-  if (ev.branch) parts.push(`branch: ${ev.branch}`);
   if (ev.detail) parts.push(ev.detail);
   if (ev.workerDetail) parts.push(ev.workerDetail);
   return parts.join(" · ") || "—";
