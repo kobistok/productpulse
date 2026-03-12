@@ -58,6 +58,10 @@ export async function POST(request: NextRequest) {
     })
   );
 
+  const now = new Date();
+  const isoWeek = targetIsoWeek ?? getISOWeek(now);
+  const year = targetYear ?? getISOWeekYear(now);
+
   const outputs = await runProductPulseAgent(
     productLines.map((pl) => {
       const currentWeekUpdate = pl.updates.find((u) => u.isoWeek === isoWeek && u.year === year);
@@ -79,9 +83,6 @@ export async function POST(request: NextRequest) {
     integrationContext
   );
 
-  const now = new Date();
-  const isoWeek = targetIsoWeek ?? getISOWeek(now);
-  const year = targetYear ?? getISOWeekYear(now);
   const created: string[] = [];
 
   console.log("[worker] outputs:", JSON.stringify(outputs.map((o) => ({ id: o.productLineId, decision: o.decision }))));
@@ -102,20 +103,34 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Update trigger event with agent result
+  // Update trigger event with agent result — awaited and split so agentDecision
+  // always lands even if the updateContent field causes issues on older deployments
   if (triggerEventId) {
     const output = outputs[0];
     const workerDetailParts: string[] = [];
     if (integrationParts.length > 0) workerDetailParts.push(integrationParts.join(" · "));
     if (output?.decision === "skipped" && output.skipReason) workerDetailParts.push(`Agent: ${output.skipReason}`);
-    prisma.triggerEvent.update({
-      where: { id: triggerEventId },
-      data: {
-        agentDecision: output?.decision ?? "skipped",
-        workerDetail: workerDetailParts.join(" · ") || null,
-        updateContent: output?.decision === "update_created" ? (output.content ?? null) : null,
-      },
-    }).catch((err) => console.error("[worker] Failed to update TriggerEvent:", err));
+
+    // Step 1: always write agentDecision (critical — drives the run log status)
+    try {
+      await prisma.triggerEvent.update({
+        where: { id: triggerEventId },
+        data: {
+          agentDecision: output?.decision ?? "skipped",
+          workerDetail: workerDetailParts.join(" · ") || null,
+        },
+      });
+    } catch (err) {
+      console.error("[worker] Failed to update TriggerEvent agentDecision:", err);
+    }
+
+    // Step 2: optionally persist the generated content for run log expansion
+    if (output?.decision === "update_created" && output.content) {
+      prisma.triggerEvent.update({
+        where: { id: triggerEventId },
+        data: { updateContent: output.content },
+      }).catch((err) => console.error("[worker] Failed to update TriggerEvent updateContent:", err));
+    }
   }
 
   for (const output of outputs) {
