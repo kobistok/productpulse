@@ -59,17 +59,22 @@ export async function POST(request: NextRequest) {
   );
 
   const outputs = await runProductPulseAgent(
-    productLines.map((pl) => ({
-      id: pl.id,
-      name: pl.name,
-      description: pl.description,
-      systemPrompt: pl.agent!.systemPrompt,
-      recentUpdates: pl.updates.map((u) => ({
-        content: u.content,
-        isoWeek: u.isoWeek,
-        year: u.year,
-      })),
-    })),
+    productLines.map((pl) => {
+      const currentWeekUpdate = pl.updates.find((u) => u.isoWeek === isoWeek && u.year === year);
+      const previousUpdates = pl.updates.filter((u) => !(u.isoWeek === isoWeek && u.year === year));
+      return {
+        id: pl.id,
+        name: pl.name,
+        description: pl.description,
+        systemPrompt: pl.agent!.systemPrompt,
+        currentWeekContent: currentWeekUpdate?.content ?? null,
+        recentUpdates: previousUpdates.map((u) => ({
+          content: u.content,
+          isoWeek: u.isoWeek,
+          year: u.year,
+        })),
+      };
+    }),
     gitEvent,
     integrationContext
   );
@@ -114,27 +119,31 @@ export async function POST(request: NextRequest) {
 
   for (const output of outputs) {
     if (output.decision === "update_created" && output.content) {
-      await prisma.update.upsert({
-        where: {
-          productLineId_isoWeek_year: {
+      const existing = await prisma.update.findUnique({
+        where: { productLineId_isoWeek_year: { productLineId: output.productLineId, isoWeek, year } },
+        select: { content: true, commitShas: true },
+      });
+
+      if (existing) {
+        await prisma.update.update({
+          where: { productLineId_isoWeek_year: { productLineId: output.productLineId, isoWeek, year } },
+          data: {
+            content: `${existing.content}\n\n---\n\n${output.content}`,
+            commitShas: [...(existing.commitShas as string[]), ...gitEvent.commits.map((c) => c.sha)],
+          },
+        });
+      } else {
+        await prisma.update.create({
+          data: {
             productLineId: output.productLineId,
             isoWeek,
             year,
+            content: output.content,
+            commitShas: gitEvent.commits.map((c) => c.sha),
+            diffSummary: gitEvent.diffSummary,
           },
-        },
-        update: {
-          content: output.content,
-          commitShas: gitEvent.commits.map((c) => c.sha),
-        },
-        create: {
-          productLineId: output.productLineId,
-          isoWeek,
-          year,
-          content: output.content,
-          commitShas: gitEvent.commits.map((c) => c.sha),
-          diffSummary: gitEvent.diffSummary,
-        },
-      });
+        });
+      }
       created.push(output.productLineId);
     }
   }

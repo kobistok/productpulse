@@ -21,7 +21,7 @@ export async function GET(
   }
 
   const events = await prisma.triggerEvent.findMany({
-    where: { productLineId: id },
+    where: { productLineId: id, status: { not: "skipped" } },
     orderBy: { createdAt: "desc" },
     take: 100,
     include: { trigger: { select: { repoUrl: true, provider: true } } },

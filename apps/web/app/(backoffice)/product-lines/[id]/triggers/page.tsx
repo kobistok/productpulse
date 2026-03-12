@@ -27,6 +27,7 @@ export default async function TriggersPage({ params }: Props) {
       gitTriggers: { orderBy: { createdAt: "asc" } },
       agent: { select: { id: true } },
       triggerEvents: {
+        where: { status: { not: "skipped" } },
         orderBy: { createdAt: "desc" },
         take: 100,
         include: { trigger: { select: { repoUrl: true, provider: true } } },

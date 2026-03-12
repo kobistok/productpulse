@@ -16,6 +16,7 @@ export interface AgentProductLine {
   description?: string | null;
   systemPrompt: string;
   recentUpdates: Array<{ content: string; isoWeek: number; year: number }>;
+  currentWeekContent?: string | null; // existing update for this week, if any
 }
 
 export interface CircleCIContext {
@@ -114,12 +115,16 @@ function buildPrompt(
   gitEvent: GitEvent,
   context?: IntegrationContext
 ): string {
+  const currentWeekSection = productLine.currentWeekContent
+    ? `This week's update so far (you are ADDING to it — do NOT rewrite or repeat what's already there):\n${productLine.currentWeekContent}\n\n`
+    : "";
+
   const recentUpdatesText =
     productLine.recentUpdates.length > 0
       ? productLine.recentUpdates
           .map((u) => `Week ${u.isoWeek}/${u.year}:\n${u.content}`)
           .join("\n\n")
-      : "No recent updates yet.";
+      : "No previous weekly updates yet.";
 
   const circleCISection = context?.circleCI
     ? `
@@ -140,7 +145,7 @@ ${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`)
   return `You are the Product Pulse agent for the "${productLine.name}" product line.
 ${productLine.description ? `Description: ${productLine.description}` : ""}
 
-Recent updates for context:
+${currentWeekSection}Recent updates from previous weeks (for context only):
 ${recentUpdatesText}
 ${circleCISection}${jiraSection}
 A git push just happened:
@@ -156,6 +161,6 @@ ${gitEvent.diffSummary}
 
 Decide:
 1. Is this push relevant to the "${productLine.name}" product line?
-2. If yes — call create_update with a clear, user-facing description of what was shipped.
+2. If yes — call create_update with a clear, user-facing description of ONLY what was shipped in THIS push. Your content will be appended to this week's update — do not repeat or rewrite anything already written this week.
 3. If no — call skip_update with a brief reason.`;
 }
