@@ -2,7 +2,7 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronRight } from "lucide-react";
+import { Plus, ChevronRight, Zap, Sparkles } from "lucide-react";
 
 export default async function ProductLinesPage() {
   const user = await requireSession();
@@ -12,7 +12,13 @@ export default async function ProductLinesPage() {
     where: { orgId },
     include: {
       agent: { select: { id: true } },
-      _count: { select: { updates: true, gitTriggers: true } },
+      _count: {
+        select: {
+          updates: true,
+          gitTriggers: true,
+          triggerEvents: { where: { status: { not: "skipped" } } },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -56,23 +62,25 @@ export default async function ProductLinesPage() {
                 {pl.description && (
                   <p className="text-sm text-zinc-500 mt-0.5">{pl.description}</p>
                 )}
-                <div className="flex items-center gap-3 mt-2">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      pl.agent
-                        ? "bg-green-50 text-green-700"
-                        : "bg-zinc-100 text-zinc-500"
-                    }`}
-                  >
-                    {pl.agent ? "Agent active" : "No agent"}
+                <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                  {pl.agent ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0" />
+                      No agent
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                    <Zap size={10} className="shrink-0" />
+                    {pl._count.triggerEvents} run{pl._count.triggerEvents !== 1 ? "s" : ""}
                   </span>
-                  <span className="text-xs text-zinc-400">
-                    {pl._count.gitTriggers} trigger
-                    {pl._count.gitTriggers !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-xs text-zinc-400">
-                    {pl._count.updates} update
-                    {pl._count.updates !== 1 ? "s" : ""}
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700 border border-violet-100">
+                    <Sparkles size={10} className="shrink-0" />
+                    {pl._count.updates} update{pl._count.updates !== 1 ? "s" : ""}
                   </span>
                 </div>
               </div>
