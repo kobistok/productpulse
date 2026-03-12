@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       data: {
         agentDecision: output?.decision ?? "skipped",
         workerDetail: workerDetailParts.join(" · ") || null,
+        updateContent: output?.decision === "update_created" ? (output.content ?? null) : null,
       },
     }).catch((err) => console.error("[worker] Failed to update TriggerEvent:", err));
   }
