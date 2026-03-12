@@ -4,10 +4,12 @@ import { getISOWeek, getISOWeekYear } from "date-fns";
 
 interface Props {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ week?: string }>;
 }
 
-export default async function PublicDashboardPage({ params }: Props) {
+export default async function PublicDashboardPage({ params, searchParams }: Props) {
   const { token } = await params;
+  const { week: weekParam } = await searchParams;
 
   const dashboardInvite = await prisma.dashboardInvite.findUnique({
     where: { token },
@@ -38,7 +40,7 @@ export default async function PublicDashboardPage({ params }: Props) {
   const weeks = [...weekSet].sort().reverse();
 
   const currentWeek = `${getISOWeekYear(new Date())}-${String(getISOWeek(new Date())).padStart(2, "0")}`;
-  const selectedWeek = weeks[0] ?? currentWeek;
+  const selectedWeek = (weekParam && weeks.includes(weekParam)) ? weekParam : (weeks[0] ?? currentWeek);
   const [selYear, selWeekNum] = selectedWeek.split("-").map(Number);
 
   return (
