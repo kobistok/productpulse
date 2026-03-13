@@ -2,6 +2,54 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 
+function UpdateContent({ content }: { content: string }) {
+  const sections = content.split(/\n\n---\n\n|\n---\n/).map((s) => s.trim()).filter(Boolean);
+  return (
+    <div className={sections.length > 1 ? "space-y-5" : ""}>
+      {sections.map((section, i) => (
+        <div key={i}>
+          {i > 0 && <div className="border-t border-zinc-100 pt-5" />}
+          <UpdateSection content={section} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UpdateSection({ content }: { content: string }) {
+  const lines = content.trim().split("\n").filter(Boolean);
+  const firstLine = lines[0] ?? "";
+  const headlineMatch = firstLine.match(/^\*\*(.+)\*\*$/);
+  const headline = headlineMatch?.[1];
+  const bodyLines = headline ? lines.slice(1) : lines;
+  const bullets = bodyLines.filter((l) => l.trim().startsWith("- "));
+  const plainLines = bodyLines.filter((l) => !l.trim().startsWith("- ") && l.trim() !== "");
+
+  return (
+    <div>
+      {headline && (
+        <p className="text-sm font-semibold text-zinc-900">{headline}</p>
+      )}
+      {!headline && plainLines.length === 0 && bullets.length === 0 && (
+        <p className="text-sm text-zinc-700">{firstLine}</p>
+      )}
+      {bullets.length > 0 && (
+        <ul className="mt-1.5 space-y-1">
+          {bullets.map((b, j) => (
+            <li key={j} className="flex items-start gap-2 text-sm text-zinc-700">
+              <span className="mt-2 w-1 h-1 rounded-full bg-zinc-400 shrink-0" />
+              <span>{b.replace(/^-\s+/, "")}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {plainLines.map((l, j) => (
+        <p key={j} className="text-sm text-zinc-700 mt-1">{l}</p>
+      ))}
+    </div>
+  );
+}
+
 interface Props {
   params: Promise<{ token: string }>;
   searchParams: Promise<{ week?: string }>;
@@ -94,7 +142,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
                   )}
                   <div className="mt-3">
                     {update ? (
-                      <p className="text-sm text-zinc-700 whitespace-pre-wrap">{update.content}</p>
+                      <UpdateContent content={update.content} />
                     ) : (
                       <p className="text-sm text-zinc-400 italic">No update this week</p>
                     )}

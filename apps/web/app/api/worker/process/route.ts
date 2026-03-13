@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         id: pl.id,
         name: pl.name,
         description: pl.description,
-        systemPrompt: pl.agent!.systemPrompt,
+        productContext: pl.agent!.productContext ?? null,
         currentWeekContent: currentWeekUpdate?.content ?? null,
         recentUpdates: previousUpdates.map((u) => ({
           content: u.content,

@@ -19,15 +19,11 @@ export default async function AgentConfigPage({ params }: Props) {
 
   if (!productLine) notFound();
 
-  const isAdmin = user.memberships[0]?.role === "ADMIN";
-  const canEdit = !productLine.agent || productLine.agent.ownerId === user.id || isAdmin;
-
   return (
     <AgentForm
       productLineId={id}
       productLineName={productLine.name}
       agent={productLine.agent}
-      canEdit={canEdit}
     />
   );
 }

@@ -88,15 +88,16 @@ model ProductLine {
 
 // 1 agent per product line — owned by the user who created it
 model Agent {
-  id            String      @id @default(cuid())
-  productLineId String      @unique
-  productLine   ProductLine @relation(fields: [productLineId], references: [id])
-  systemPrompt  String      @db.Text
-  model         String      @default("claude-sonnet-4-6")
-  ownerId       String // userId — the "manager" of this agent
-  createdBy     String // userId
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  productLineId  String      @unique
+  productLine    ProductLine @relation(fields: [productLineId], references: [id])
+  systemPrompt   String?     @db.Text // deprecated — prompt is now internal
+  productContext String?     @db.Text // optional context provided by the user
+  model          String      @default("claude-sonnet-4-6")
+  ownerId        String // userId — the "manager" of this agent
+  createdBy      String // userId
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 model GitTrigger {

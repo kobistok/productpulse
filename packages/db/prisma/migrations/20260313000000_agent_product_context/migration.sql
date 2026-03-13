@@ -1,0 +1,2 @@
+ALTER TABLE "Agent" ALTER COLUMN "systemPrompt" DROP NOT NULL;
+ALTER TABLE "Agent" ADD COLUMN "productContext" TEXT;

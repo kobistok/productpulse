@@ -14,10 +14,27 @@ export interface AgentProductLine {
   id: string;
   name: string;
   description?: string | null;
-  systemPrompt: string;
+  productContext?: string | null; // optional context provided by the user
   recentUpdates: Array<{ content: string; isoWeek: number; year: number }>;
   currentWeekContent?: string | null; // existing update for this week, if any
 }
+
+const SYSTEM_PROMPT = `You are a product update agent. Your job is to monitor git pushes and decide whether they contain user-facing changes worth reporting.
+
+Guidelines:
+- Only create updates for changes that affect end users: new features, bug fixes, UX improvements, performance wins
+- Skip: internal refactors, infrastructure changes, dependency bumps, test-only changes, CI config
+- Write in clear, non-technical language that a non-engineer stakeholder can understand
+- Use past tense: "Improved...", "Fixed...", "Users can now..."
+
+Output format — always use this exact structure:
+**[Short headline summarising the change, e.g. "Improved checkout speed"]**
+
+- What changed or what users can now do (1 concise sentence)
+- Another change if relevant (1 concise sentence)
+- Bug fix or improvement if relevant (1 concise sentence)
+
+Keep it to 1 headline + 2–4 bullets. No paragraphs. No intro text before or after.`;
 
 export interface CircleCIContext {
   lastSuccessfulPipelineAt: string | null; // ISO date string
@@ -54,7 +71,7 @@ export async function runProductPulseAgent(
   for (const productLine of productLines) {
     const result = await generateText({
       model: anthropic("claude-sonnet-4-6"),
-      system: productLine.systemPrompt,
+      system: SYSTEM_PROMPT,
       prompt: buildPrompt(productLine, gitEvent, integrationContext?.[productLine.id]),
       tools: {
         create_update: tool({
@@ -142,8 +159,13 @@ ${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`)
 `
       : "";
 
+  const contextSection = [
+    productLine.description ? `Description: ${productLine.description}` : "",
+    productLine.productContext ? `Product context: ${productLine.productContext}` : "",
+  ].filter(Boolean).join("\n");
+
   return `You are the Product Pulse agent for the "${productLine.name}" product line.
-${productLine.description ? `Description: ${productLine.description}` : ""}
+${contextSection}
 
 ${currentWeekSection}Recent updates from previous weeks (for context only):
 ${recentUpdatesText}
