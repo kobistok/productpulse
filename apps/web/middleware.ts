@@ -9,8 +9,8 @@ export function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   if (isPublic) return NextResponse.next();
 
-  // Worker route is authenticated via bearer token, not session cookie
-  if (pathname.startsWith("/api/worker/")) return NextResponse.next();
+  // Bearer-token authenticated routes — no session cookie needed
+  if (pathname.startsWith("/api/worker/") || pathname.startsWith("/api/admin/")) return NextResponse.next();
 
   const session = request.cookies.get("__session");
   if (!session) {
