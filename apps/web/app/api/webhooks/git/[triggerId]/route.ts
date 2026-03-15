@@ -110,7 +110,7 @@ export async function POST(
         triggerEventId,
         productLineId: trigger.productLineId,
         orgId: trigger.productLine.orgId,
-        payload: normalized,
+        payload: trimPayload(normalized),
       });
     } catch (err) {
       console.error("[webhook] Failed to enqueue agent job:", err);
@@ -216,4 +216,27 @@ function matchesFilter(value: string, filter: string): boolean {
   if (filter === value) return true;
   if (filter.endsWith("*")) return value.startsWith(filter.slice(0, -1));
   return false;
+}
+
+// Trim the payload to stay well under Cloud Tasks' 100KB task size limit
+function trimPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  type RawCommit = {
+    id?: string;
+    message?: string;
+    author?: unknown;
+    added?: string[];
+    modified?: string[];
+    removed?: string[];
+  };
+  const commits = ((payload.commits as RawCommit[] | undefined) ?? [])
+    .slice(0, 20)
+    .map((c) => ({
+      id: c.id,
+      message: (c.message ?? "").slice(0, 500),
+      author: c.author,
+      added: (c.added ?? []).slice(0, 50),
+      modified: (c.modified ?? []).slice(0, 50),
+      removed: (c.removed ?? []).slice(0, 50),
+    }));
+  return { ...payload, commits };
 }
