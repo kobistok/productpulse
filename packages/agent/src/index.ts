@@ -37,9 +37,9 @@ Output format — always use this exact structure:
 - Bug fix or improvement if relevant (1 concise sentence)
 
 Metadata line rules:
-- If there are Jira tickets: KEY · Date  e.g. PROJ-123 · March 16, 2026
-- Multiple tickets: PROJ-123 PROJ-456 · Date
-- If no Jira tickets: just the date  e.g. March 16, 2026
+- If there are Jira tickets: KEY · Date Time  e.g. PROJ-123 · March 16, 2026, 2:34 PM
+- Multiple tickets: PROJ-123 PROJ-456 · Date Time
+- If no Jira tickets: just the date and time  e.g. March 16, 2026, 2:34 PM
 
 Keep it to 1 headline + metadata + 2–4 bullets. No paragraphs. No intro text before or after.`;
 
@@ -172,7 +172,7 @@ ${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`)
     productLine.productContext ? `Product context: ${productLine.productContext}` : "",
   ].filter(Boolean).join("\n");
 
-  const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const today = new Date().toLocaleString("en-US", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
 
   return `You are the Product Pulse agent for the "${productLine.name}" product line.
 Today's date: ${today}

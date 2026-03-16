@@ -69,7 +69,8 @@ export function UpdateContent({ content, jiraBaseUrl }: { content: string; jiraB
     .split(/\n\n---\n\n|\n---\n/)
     .map((s) => s.trim())
     .filter(Boolean)
-    .map(parseSection);
+    .map(parseSection)
+    .reverse(); // newest push first
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 

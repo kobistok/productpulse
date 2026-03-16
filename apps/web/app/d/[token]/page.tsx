@@ -1,16 +1,24 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { getISOWeek, getISOWeekYear } from "date-fns";
 import { UpdateContent } from "@/components/update-content";
 
 interface Props {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ pl?: string }>;
+}
+
+function formatLastUpdate(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export default async function PublicDashboardPage({ params, searchParams }: Props) {
   const { token } = await params;
-  const { week: weekParam } = await searchParams;
+  const { pl: plParam } = await searchParams;
 
   const dashboardInvite = await prisma.dashboardInvite.findUnique({
     where: { token },
@@ -26,92 +34,108 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
       jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       updates: {
         orderBy: [{ year: "desc" }, { isoWeek: "desc" }],
-        take: 52, // up to a year of weekly updates
+        take: 52,
       },
+      _count: { select: { triggerEvents: true } },
     },
     orderBy: { name: "asc" },
   });
 
-  // Collect all unique year-week combinations across all product lines
-  const weekSet = new Set<string>();
-  for (const pl of productLines) {
-    for (const u of pl.updates) {
-      weekSet.add(`${u.year}-${String(u.isoWeek).padStart(2, "0")}`);
-    }
-  }
-  const weeks = [...weekSet].sort().reverse();
+  const selectedPl = productLines.find((pl) => pl.id === plParam) ?? productLines[0];
 
-  const currentWeek = `${getISOWeekYear(new Date())}-${String(getISOWeek(new Date())).padStart(2, "0")}`;
-  const selectedWeek = (weekParam && weeks.includes(weekParam)) ? weekParam : (weeks[0] ?? currentWeek);
-  const [selYear, selWeekNum] = selectedWeek.split("-").map(Number);
+  const jiraBaseUrl = selectedPl?.jiraConfig
+    ? selectedPl.jiraConfig.atlassianDomain
+      ? `https://${selectedPl.jiraConfig.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : selectedPl.jiraConfig.baseUrl.replace(/\/+$/, "")
+    : undefined;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="bg-white border-b border-zinc-200 px-8 py-5">
+    <div className="h-screen flex flex-col bg-zinc-50">
+      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex-shrink-0">
         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Product Pulse</p>
-        <h1 className="text-xl font-semibold text-zinc-900 mt-0.5">{dashboardInvite.org.name}</h1>
+        <h1 className="text-lg font-semibold text-zinc-900 mt-0.5">{dashboardInvite.org.name}</h1>
       </header>
 
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        {/* Week selector */}
-        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
-          {weeks.map((w) => {
-            const [wy, wn] = w.split("-").map(Number);
-            const isCurrent = w === currentWeek;
-            const isSelected = w === selectedWeek;
-            return (
-              <a
-                key={w}
-                href={`?week=${w}`}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  isSelected
-                    ? "bg-zinc-900 text-white"
-                    : "bg-white border border-zinc-200 text-zinc-600 hover:border-zinc-300"
-                }`}
-              >
-                W{wn} {wy}
-                {isCurrent && " (current)"}
-              </a>
-            );
-          })}
+      {productLines.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-zinc-500">No product lines yet.</p>
         </div>
-
-        {/* Updates grid */}
-        {productLines.length === 0 ? (
-          <p className="text-sm text-zinc-500 text-center py-20">No product lines yet.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left sidebar */}
+          <aside className="w-64 border-r border-zinc-200 bg-white flex-shrink-0 overflow-y-auto">
+            <div className="px-4 py-3 border-b border-zinc-100">
+              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                Product Lines
+              </p>
+            </div>
             {productLines.map((pl) => {
-              const jiraBaseUrl = pl.jiraConfig
-                ? pl.jiraConfig.atlassianDomain
-                  ? `https://${pl.jiraConfig.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-                  : pl.jiraConfig.baseUrl.replace(/\/+$/, "")
-                : undefined;
-              const update = pl.updates.find(
-                (u) => u.year === selYear && u.isoWeek === selWeekNum
-              );
+              const isSelected = pl.id === selectedPl?.id;
+              const lastUpdate = pl.updates[0];
               return (
-                <div
+                <a
                   key={pl.id}
-                  className="bg-white border border-zinc-200 rounded-xl p-5"
+                  href={`?pl=${pl.id}`}
+                  className={`block px-4 py-3 border-b border-zinc-100 border-l-2 transition-colors ${
+                    isSelected
+                      ? "bg-zinc-50 border-l-zinc-900"
+                      : "border-l-transparent hover:bg-zinc-50"
+                  }`}
                 >
-                  <h2 className="text-base font-semibold text-zinc-900">{pl.name}</h2>
-                  {pl.description && (
-                    <p className="text-sm text-zinc-400 mt-0.5 mb-3">{pl.description}</p>
-                  )}
-                  <div className={pl.description ? "" : "mt-3"}>
-                    {update ? (
-                      <UpdateContent content={update.content} jiraBaseUrl={jiraBaseUrl} />
-                    ) : (
-                      <p className="text-sm text-zinc-400 italic">No update this week</p>
-                    )}
+                  <p className={`text-sm font-medium truncate ${isSelected ? "text-zinc-900" : "text-zinc-700"}`}>
+                    {pl.name}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1 text-xs text-zinc-400">
+                    <span>{pl._count.triggerEvents} runs</span>
+                    <span>·</span>
+                    <span>{pl.updates.length} updates</span>
                   </div>
-                </div>
+                  {lastUpdate ? (
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Last update: {formatLastUpdate(lastUpdate.updatedAt)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-zinc-300 mt-0.5 italic">No updates yet</p>
+                  )}
+                </a>
               );
             })}
-          </div>
-        )}
-      </div>
+          </aside>
+
+          {/* Right panel */}
+          <main className="flex-1 overflow-y-auto">
+            {selectedPl ? (
+              <div className="max-w-2xl mx-auto px-8 py-8">
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold text-zinc-900">{selectedPl.name}</h2>
+                  {selectedPl.description && (
+                    <p className="text-sm text-zinc-500 mt-1">{selectedPl.description}</p>
+                  )}
+                </div>
+
+                {selectedPl.updates.length === 0 ? (
+                  <p className="text-sm text-zinc-400 italic">No updates yet.</p>
+                ) : (
+                  <div className="space-y-10">
+                    {selectedPl.updates.map((update) => (
+                      <div key={update.id}>
+                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                          Week {update.isoWeek}, {update.year}
+                        </p>
+                        <UpdateContent content={update.content} jiraBaseUrl={jiraBaseUrl} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-zinc-400">Select a product line to view updates.</p>
+              </div>
+            )}
+          </main>
+        </div>
+      )}
     </div>
   );
 }
