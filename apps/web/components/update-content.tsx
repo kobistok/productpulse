@@ -31,12 +31,14 @@ function parseSection(raw: string): ParsedSection {
   };
 }
 
-// Renders a line that may contain [text](url) markdown links or bare Jira keys
+// Renders a line that may contain Jira keys (bare or as [KEY](url)) and plain text
 function InlineMeta({ text, jiraBaseUrl }: { text: string; jiraBaseUrl?: string }) {
-  // Auto-link bare Jira keys (e.g. PROJ-123) that aren't already inside [...]
+  // Strip any existing [KEY](url) links to bare keys — avoids double-linking and removes stale URLs
+  const stripped = text.replace(/\[([A-Z][A-Z0-9]+-\d+)\]\([^)]*\)/g, "$1");
+  // Re-link bare keys using the configured domain
   const processed = jiraBaseUrl
-    ? text.replace(/(?<!\[)([A-Z][A-Z0-9]+-\d+)/g, (key) => `[${key}](${jiraBaseUrl}/browse/${key})`)
-    : text;
+    ? stripped.replace(/\b([A-Z][A-Z0-9]+-\d+)\b/g, (key) => `[${key}](${jiraBaseUrl}/browse/${key})`)
+    : stripped;
   const parts = processed.split(/(\[[^\]]+\]\([^)]+\))/g);
   return (
     <span className="flex flex-wrap items-center gap-x-1 text-xs text-zinc-400 mt-0.5">
