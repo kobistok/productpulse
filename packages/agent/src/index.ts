@@ -36,8 +36,8 @@ Output format — always use this exact structure:
 - Bug fix or improvement if relevant (1 concise sentence)
 
 Metadata line rules:
-- If there are Jira tickets: [KEY](url) · Date  e.g. [PROJ-123](https://company.atlassian.net/browse/PROJ-123) · March 16, 2026
-- Multiple tickets: [PROJ-123](url) [PROJ-456](url) · Date
+- If there are Jira tickets: KEY · Date  e.g. PROJ-123 · March 16, 2026
+- Multiple tickets: PROJ-123 PROJ-456 · Date
 - If no Jira tickets: just the date  e.g. March 16, 2026
 
 Keep it to 1 headline + metadata + 2–4 bullets. No paragraphs. No intro text before or after.`;
@@ -162,10 +162,7 @@ Commits not yet in production: ${context.circleCI.unreleasedCommitCount ?? "unkn
     context?.jira && context.jira.length > 0
       ? `
 [Jira — Related Tickets]
-${context.jira.map((t) => {
-  const url = context.jiraBaseUrl ? `${context.jiraBaseUrl}/browse/${t.key}` : null;
-  return `- ${t.key} [${t.type}] "${t.summary}" (${t.status})${url ? ` — ${url}` : ""}`;
-}).join("\n")}
+${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`).join("\n")}
 `
       : "";
 
