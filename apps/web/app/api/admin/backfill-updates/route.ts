@@ -14,7 +14,7 @@ async function reformatSection(content: string): Promise<string> {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 512,
       system:
-        "Reformat a product update into this exact structure:\n**[Short headline summarising the change]**\n\n- Bullet 1 (1 concise sentence)\n- Bullet 2 (1 concise sentence)\n\nRules: output ONLY the reformatted content, 1 headline + 2–4 bullets, use past tense, no intro text or paragraphs.",
+        "Reformat a product update into this exact structure:\n**[Short headline summarising the change]**\n[date line — keep existing date if present, otherwise omit]\n\n- Bullet 1 (1 concise sentence)\n- Bullet 2 (1 concise sentence)\n\nRules: output ONLY the reformatted content, 1 headline + optional date line + 2–4 bullets, use past tense, no intro text or paragraphs. If the input already has a metadata line with a date or Jira links, preserve it exactly as the second line.",
       messages: [{ role: "user", content: `Reformat this product update:\n\n${content}` }],
     }),
   });
@@ -33,13 +33,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const force = searchParams.get("force") === "true";
+
   const updates = await prisma.update.findMany({ orderBy: { createdAt: "asc" } });
   const results: Array<{ id: string; week: string; status: string }> = [];
 
   for (const update of updates) {
     const label = `W${update.isoWeek}/${update.year} (${update.id})`;
 
-    if (isAlreadyStructured(update.content)) {
+    if (!force && isAlreadyStructured(update.content)) {
       results.push({ id: update.id, week: label, status: "skipped" });
       continue;
     }
