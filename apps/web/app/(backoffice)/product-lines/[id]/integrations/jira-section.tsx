@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 
 interface Props {
   productLineId: string;
-  existing: { baseUrl: string; email: string } | null;
+  existing: { baseUrl: string; atlassianDomain: string | null; email: string } | null;
 }
 
 export function JiraSection({ productLineId, existing }: Props) {
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? "");
+  const [atlassianDomain, setAtlassianDomain] = useState(existing?.atlassianDomain ?? "");
   const [email, setEmail] = useState(existing?.email ?? "");
   const [apiToken, setApiToken] = useState("");
   const [saving, setSaving] = useState(false);
@@ -24,7 +25,7 @@ export function JiraSection({ productLineId, existing }: Props) {
     const res = await fetch(`/api/product-lines/${productLineId}/integrations/jira`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baseUrl, email, apiToken }),
+      body: JSON.stringify({ baseUrl, atlassianDomain, email, apiToken }),
     });
     if (res.ok) {
       setConnected(true);
@@ -78,15 +79,27 @@ export function JiraSection({ productLineId, existing }: Props) {
       </div>
 
       <form onSubmit={handleSave} className="space-y-3">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-zinc-600">Jira base URL</label>
-          <Input
-            value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder="https://yourcompany.atlassian.net"
-            type="url"
-            required
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Jira base URL</label>
+            <Input
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="https://yourcompany.atlassian.net"
+              type="url"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">
+              Atlassian domain <span className="text-zinc-400 font-normal">(for ticket links)</span>
+            </label>
+            <Input
+              value={atlassianDomain}
+              onChange={(e) => setAtlassianDomain(e.target.value)}
+              placeholder="yourcompany.atlassian.net"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

@@ -148,14 +148,15 @@ model CircleCIConfig {
 }
 
 model JiraConfig {
-  id            String      @id @default(cuid())
-  productLineId String      @unique
-  productLine   ProductLine @relation(fields: [productLineId], references: [id])
-  baseUrl       String // e.g. "https://myco.atlassian.net"
-  email         String
-  apiToken      String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  productLineId    String      @unique
+  productLine      ProductLine @relation(fields: [productLineId], references: [id])
+  baseUrl          String // e.g. "https://myco.atlassian.net" — used for API calls
+  atlassianDomain  String? // e.g. "myco.atlassian.net" — used for ticket browse links
+  email            String
+  apiToken         String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 }
 
 // One update per product line per ISO week (upserted by agent)

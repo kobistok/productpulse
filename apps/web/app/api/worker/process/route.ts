@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
         const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message));
         if (tickets.length > 0) {
           ctx.jira = tickets;
-          ctx.jiraBaseUrl = pl.jiraConfig.baseUrl;
+          // Prefer explicit atlassianDomain for browse links; fall back to normalized baseUrl
+          const domain = pl.jiraConfig.atlassianDomain?.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+          ctx.jiraBaseUrl = domain
+            ? `https://${domain}`
+            : pl.jiraConfig.baseUrl.replace(/\/+$/, "");
         }
       }
       if (ctx.circleCI || ctx.jira) {

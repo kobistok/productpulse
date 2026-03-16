@@ -30,15 +30,25 @@ export async function PUT(
   const productLine = await prisma.productLine.findFirst({ where: { id, orgId } });
   if (!productLine) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { baseUrl, email, apiToken } = await request.json();
-  if (!baseUrl || !email || !apiToken) {
-    return NextResponse.json({ error: "baseUrl, email and apiToken are required" }, { status: 400 });
+  const { baseUrl, atlassianDomain, email, apiToken } = await request.json();
+  if (!baseUrl || !email) {
+    return NextResponse.json({ error: "baseUrl and email are required" }, { status: 400 });
+  }
+
+  const existing = await prisma.jiraConfig.findUnique({ where: { productLineId: id } });
+  if (!existing && !apiToken) {
+    return NextResponse.json({ error: "apiToken is required" }, { status: 400 });
   }
 
   const config = await prisma.jiraConfig.upsert({
     where: { productLineId: id },
-    update: { baseUrl, email, apiToken },
-    create: { productLineId: id, baseUrl, email, apiToken },
+    update: {
+      baseUrl,
+      atlassianDomain: atlassianDomain?.trim() || null,
+      email,
+      ...(apiToken ? { apiToken } : {}),
+    },
+    create: { productLineId: id, baseUrl, atlassianDomain: atlassianDomain?.trim() || null, email, apiToken },
   });
 
   return NextResponse.json({ ...config, apiToken: "••••••••" });

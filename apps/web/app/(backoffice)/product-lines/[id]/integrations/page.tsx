@@ -42,7 +42,7 @@ export default async function IntegrationsPage({
         productLineId={id}
         existing={
           productLine.jiraConfig
-            ? { baseUrl: productLine.jiraConfig.baseUrl, email: productLine.jiraConfig.email }
+            ? { baseUrl: productLine.jiraConfig.baseUrl, atlassianDomain: productLine.jiraConfig.atlassianDomain, email: productLine.jiraConfig.email }
             : null
         }
       />
