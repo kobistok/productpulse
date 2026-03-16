@@ -28,13 +28,19 @@ Guidelines:
 - Use past tense: "Improved...", "Fixed...", "Users can now..."
 
 Output format — always use this exact structure:
-**[Short headline summarising the change, e.g. "Improved checkout speed"]**
+**[Short headline summarising the change]**
+[metadata line — see below]
 
 - What changed or what users can now do (1 concise sentence)
 - Another change if relevant (1 concise sentence)
 - Bug fix or improvement if relevant (1 concise sentence)
 
-Keep it to 1 headline + 2–4 bullets. No paragraphs. No intro text before or after.`;
+Metadata line rules:
+- If there are Jira tickets: [KEY](url) · Date  e.g. [PROJ-123](https://company.atlassian.net/browse/PROJ-123) · March 16, 2026
+- Multiple tickets: [PROJ-123](url) [PROJ-456](url) · Date
+- If no Jira tickets: just the date  e.g. March 16, 2026
+
+Keep it to 1 headline + metadata + 2–4 bullets. No paragraphs. No intro text before or after.`;
 
 export interface CircleCIContext {
   lastSuccessfulPipelineAt: string | null; // ISO date string
@@ -52,6 +58,7 @@ export interface JiraTicket {
 export interface IntegrationContext {
   circleCI?: CircleCIContext;
   jira?: JiraTicket[];
+  jiraBaseUrl?: string;
 }
 
 export interface AgentOutput {
@@ -155,7 +162,10 @@ Commits not yet in production: ${context.circleCI.unreleasedCommitCount ?? "unkn
     context?.jira && context.jira.length > 0
       ? `
 [Jira — Related Tickets]
-${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`).join("\n")}
+${context.jira.map((t) => {
+  const url = context.jiraBaseUrl ? `${context.jiraBaseUrl}/browse/${t.key}` : null;
+  return `- ${t.key} [${t.type}] "${t.summary}" (${t.status})${url ? ` — ${url}` : ""}`;
+}).join("\n")}
 `
       : "";
 
@@ -164,7 +174,10 @@ ${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`)
     productLine.productContext ? `Product context: ${productLine.productContext}` : "",
   ].filter(Boolean).join("\n");
 
+  const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
   return `You are the Product Pulse agent for the "${productLine.name}" product line.
+Today's date: ${today}
 ${contextSection}
 
 ${currentWeekSection}Recent updates from previous weeks (for context only):

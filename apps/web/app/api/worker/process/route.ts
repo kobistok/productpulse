@@ -50,7 +50,10 @@ export async function POST(request: NextRequest) {
       }
       if (pl.jiraConfig) {
         const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message));
-        if (tickets.length > 0) ctx.jira = tickets;
+        if (tickets.length > 0) {
+          ctx.jira = tickets;
+          ctx.jiraBaseUrl = pl.jiraConfig.baseUrl;
+        }
       }
       if (ctx.circleCI || ctx.jira) {
         integrationContext[pl.id] = ctx;
