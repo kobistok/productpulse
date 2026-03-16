@@ -21,6 +21,7 @@ export default async function ProductLineOverviewPage({ params }: Props) {
     include: {
       agent: { select: { id: true, model: true, updatedAt: true } },
       gitTriggers: { where: { active: true } },
+      jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       updates: {
         orderBy: [{ year: "desc" }, { isoWeek: "desc" }],
         take: 8,
@@ -29,6 +30,12 @@ export default async function ProductLineOverviewPage({ params }: Props) {
   });
 
   if (!productLine) notFound();
+
+  const jiraBaseUrl = productLine.jiraConfig
+    ? productLine.jiraConfig.atlassianDomain
+      ? `https://${productLine.jiraConfig.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : productLine.jiraConfig.baseUrl.replace(/\/+$/, "")
+    : undefined;
 
   const currentWeek = getISOWeek(new Date());
   const currentYear = getISOWeekYear(new Date());
@@ -88,7 +95,7 @@ export default async function ProductLineOverviewPage({ params }: Props) {
         </h2>
         <div className="bg-white border border-zinc-200 rounded-xl p-5">
           {thisWeekUpdate ? (
-            <UpdateContent content={thisWeekUpdate.content} />
+            <UpdateContent content={thisWeekUpdate.content} jiraBaseUrl={jiraBaseUrl} />
           ) : (
             <p className="text-sm text-zinc-400 italic">
               No update generated yet this week.{" "}
@@ -117,7 +124,7 @@ export default async function ProductLineOverviewPage({ params }: Props) {
                 <p className="text-xs font-medium text-zinc-400 mb-3">
                   W{u.isoWeek} {u.year}
                 </p>
-                <UpdateContent content={u.content} />
+                <UpdateContent content={u.content} jiraBaseUrl={jiraBaseUrl} />
               </div>
             ))}
           </div>

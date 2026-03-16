@@ -31,9 +31,13 @@ function parseSection(raw: string): ParsedSection {
   };
 }
 
-// Renders a line that may contain [text](url) markdown links
-function InlineMeta({ text }: { text: string }) {
-  const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g);
+// Renders a line that may contain [text](url) markdown links or bare Jira keys
+function InlineMeta({ text, jiraBaseUrl }: { text: string; jiraBaseUrl?: string }) {
+  // Auto-link bare Jira keys (e.g. PROJ-123) that aren't already inside [...]
+  const processed = jiraBaseUrl
+    ? text.replace(/(?<!\[)([A-Z][A-Z0-9]+-\d+)/g, (key) => `[${key}](${jiraBaseUrl}/browse/${key})`)
+    : text;
+  const parts = processed.split(/(\[[^\]]+\]\([^)]+\))/g);
   return (
     <span className="flex flex-wrap items-center gap-x-1 text-xs text-zinc-400 mt-0.5">
       {parts.map((part, i) => {
@@ -58,7 +62,7 @@ function InlineMeta({ text }: { text: string }) {
   );
 }
 
-export function UpdateContent({ content }: { content: string }) {
+export function UpdateContent({ content, jiraBaseUrl }: { content: string; jiraBaseUrl?: string }) {
   const sections = content
     .split(/\n\n---\n\n|\n---\n/)
     .map((s) => s.trim())
@@ -96,7 +100,7 @@ export function UpdateContent({ content }: { content: string }) {
                 <span className="text-sm font-medium text-zinc-900 leading-snug">
                   {section.headline}
                 </span>
-                {section.meta && <InlineMeta text={section.meta} />}
+                {section.meta && <InlineMeta text={section.meta} jiraBaseUrl={jiraBaseUrl} />}
               </div>
               {hasDetails && (
                 isExpanded

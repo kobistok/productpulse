@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// Reformat a single section into **Headline** + bullets using Claude Haiku
-async function reformatSection(content: string): Promise<string> {
+// Reformat a single section into **Headline** + date + bullets using Claude Haiku
+async function reformatSection(content: string, date: string): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -14,8 +14,8 @@ async function reformatSection(content: string): Promise<string> {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 512,
       system:
-        "Reformat a product update into this exact structure:\n**[Short headline summarising the change]**\n[date line — keep existing date if present, otherwise omit]\n\n- Bullet 1 (1 concise sentence)\n- Bullet 2 (1 concise sentence)\n\nRules: output ONLY the reformatted content, 1 headline + optional date line + 2–4 bullets, use past tense, no intro text or paragraphs. If the input already has a metadata line with a date or Jira links, preserve it exactly as the second line.",
-      messages: [{ role: "user", content: `Reformat this product update:\n\n${content}` }],
+        "Reformat a product update into this exact structure:\n**[Short headline summarising the change]**\n[date]\n\n- Bullet 1 (1 concise sentence)\n- Bullet 2 (1 concise sentence)\n\nRules: output ONLY the reformatted content. Always put the provided date on the second line. 1 headline + date + 2–4 bullets, use past tense, no intro text or paragraphs.",
+      messages: [{ role: "user", content: `Reformat this product update (date: ${date}):\n\n${content}` }],
     }),
   });
   const data = (await res.json()) as { content?: Array<{ text?: string }> };
@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      const date = new Date(update.createdAt).toLocaleDateString("en-US", {
+        month: "long", day: "numeric", year: "numeric",
+      });
+
       const sections = update.content
         .split(/\n\n---\n\n|\n---\n/)
         .map((s) => s.trim())
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
 
       const reformattedSections: string[] = [];
       for (const section of sections) {
-        reformattedSections.push(await reformatSection(section));
+        reformattedSections.push(await reformatSection(section, date));
       }
 
       await prisma.update.update({

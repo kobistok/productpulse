@@ -23,6 +23,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
   const productLines = await prisma.productLine.findMany({
     where: { orgId: dashboardInvite.orgId },
     include: {
+      jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       updates: {
         orderBy: [{ year: "desc" }, { isoWeek: "desc" }],
         take: 52, // up to a year of weekly updates
@@ -81,6 +82,11 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {productLines.map((pl) => {
+              const jiraBaseUrl = pl.jiraConfig
+                ? pl.jiraConfig.atlassianDomain
+                  ? `https://${pl.jiraConfig.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+                  : pl.jiraConfig.baseUrl.replace(/\/+$/, "")
+                : undefined;
               const update = pl.updates.find(
                 (u) => u.year === selYear && u.isoWeek === selWeekNum
               );
@@ -95,7 +101,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
                   )}
                   <div className={pl.description ? "" : "mt-3"}>
                     {update ? (
-                      <UpdateContent content={update.content} />
+                      <UpdateContent content={update.content} jiraBaseUrl={jiraBaseUrl} />
                     ) : (
                       <p className="text-sm text-zinc-400 italic">No update this week</p>
                     )}
