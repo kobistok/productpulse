@@ -17,19 +17,21 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { productContext, model } = await request.json();
+  const { productContext, filterRule, model } = await request.json();
 
   const agent = await prisma.agent.upsert({
     where: { productLineId: id },
     create: {
       productLineId: id,
       productContext: productContext?.trim() || null,
+      filterRule: filterRule?.trim() || null,
       model: model ?? "claude-sonnet-4-6",
       ownerId: user.id,
       createdBy: user.id,
     },
     update: {
       productContext: productContext?.trim() || null,
+      filterRule: filterRule?.trim() || null,
       model: model ?? "claude-sonnet-4-6",
     },
   });

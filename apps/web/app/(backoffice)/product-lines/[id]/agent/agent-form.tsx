@@ -20,6 +20,7 @@ interface Props {
 
 export function AgentForm({ productLineId, productLineName, agent }: Props) {
   const [productContext, setProductContext] = useState(agent?.productContext ?? "");
+  const [filterRule, setFilterRule] = useState(agent?.filterRule ?? "");
   const [model, setModel] = useState(agent?.model ?? "claude-sonnet-4-6");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -34,7 +35,7 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
     const res = await fetch(`/api/product-lines/${productLineId}/agent`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productContext, model }),
+      body: JSON.stringify({ productContext, filterRule, model }),
     });
 
     if (res.ok) {
@@ -86,6 +87,22 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
           />
           <p className="text-xs text-zinc-400">
             Helps the agent understand what matters for this product line.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-700">
+            Update Filter <span className="font-normal text-zinc-400">(optional)</span>
+          </label>
+          <Textarea
+            value={filterRule}
+            onChange={(e) => setFilterRule(e.target.value)}
+            rows={3}
+            className="text-sm"
+            placeholder="e.g. Only process if Jira ticket development team is A or B. Skip infrastructure-only changes."
+          />
+          <p className="text-xs text-zinc-400">
+            The agent will skip pushes that don&apos;t match this condition. Useful when multiple product lines share the same repository.
           </p>
         </div>
 

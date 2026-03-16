@@ -15,6 +15,7 @@ export interface AgentProductLine {
   name: string;
   description?: string | null;
   productContext?: string | null; // optional context provided by the user
+  filterRule?: string | null; // optional filter: skip if condition not met
   recentUpdates: Array<{ content: string; isoWeek: number; year: number }>;
   currentWeekContent?: string | null; // existing update for this week, if any
 }
@@ -191,8 +192,13 @@ ${gitEvent.commits.map((c) => `- ${c.sha.slice(0, 7)} ${c.message} (${c.author})
 Diff summary:
 ${gitEvent.diffSummary}
 
-Decide:
+${productLine.filterRule ? `Filter — only create an update if ALL of the following conditions are met:
+${productLine.filterRule}
+If this filter condition is NOT satisfied by this push or its Jira context, call skip_update.
+
+` : ""}Decide:
 1. Is this push relevant to the "${productLine.name}" product line?
-2. If yes — call create_update with a clear, user-facing description of ONLY what was shipped in THIS push. Your content will be appended to this week's update — do not repeat or rewrite anything already written this week.
-3. If no — call skip_update with a brief reason.`;
+2. Does it satisfy the filter above (if any)?
+3. If yes to both — call create_update with a clear, user-facing description of ONLY what was shipped in THIS push. Your content will be appended to this week's update — do not repeat or rewrite anything already written this week.
+4. If no — call skip_update with a brief reason.`;
 }

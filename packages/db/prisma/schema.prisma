@@ -93,6 +93,7 @@ model Agent {
   productLine    ProductLine @relation(fields: [productLineId], references: [id])
   systemPrompt   String?     @db.Text // deprecated — prompt is now internal
   productContext String?     @db.Text // optional context provided by the user
+  filterRule     String?     @db.Text // optional filter: agent skips if condition not met
   model          String      @default("claude-sonnet-4-6")
   ownerId        String // userId — the "manager" of this agent
   createdBy      String // userId

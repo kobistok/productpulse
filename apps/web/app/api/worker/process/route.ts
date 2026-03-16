@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         name: pl.name,
         description: pl.description,
         productContext: pl.agent!.productContext ?? null,
+        filterRule: pl.agent!.filterRule ?? null,
         currentWeekContent: currentWeekUpdate?.content ?? null,
         recentUpdates: previousUpdates.map((u) => ({
           content: u.content,
