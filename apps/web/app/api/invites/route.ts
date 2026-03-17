@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   const user = await requireSession();
-  const { orgId } = await request.json();
+  const { orgId, email } = await request.json();
 
   // Verify user is an admin of this org
   const membership = user.memberships.find(
@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     data: {
       orgId,
       role: "MEMBER",
+      email: email?.toLowerCase().trim() || null,
       expiresAt,
       createdBy: user.id,
     },

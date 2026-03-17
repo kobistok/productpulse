@@ -59,6 +59,7 @@ model Invite {
   orgId     String
   org       Organization @relation(fields: [orgId], references: [id])
   role      Role         @default(MEMBER)
+  email     String?      // invited user's email — if set, only this email can accept
   token     String       @unique @default(cuid())
   expiresAt DateTime
   usedAt    DateTime?
