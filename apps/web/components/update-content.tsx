@@ -2,16 +2,27 @@
 
 import { useState } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { LocalTime } from "./local-time";
 
 interface ParsedSection {
   headline: string;
   meta: string | null;
   bullets: string[];
   plainLines: string[];
+  timestamp: string | null;
 }
 
 function parseSection(raw: string): ParsedSection {
-  const lines = raw.trim().split("\n").filter(Boolean);
+  // Extract injected timestamp comment <!-- ts:ISO --> if present
+  let timestamp: string | null = null;
+  let source = raw.trim();
+  const tsMatch = source.match(/^<!--\s*ts:([^\s>]+)\s*-->\n?/);
+  if (tsMatch) {
+    timestamp = tsMatch[1];
+    source = source.slice(tsMatch[0].length).trimStart();
+  }
+
+  const lines = source.split("\n").filter(Boolean);
   const firstLine = lines[0] ?? "";
   const headlineMatch = firstLine.match(/^\*\*(.+)\*\*$/);
   const headline = headlineMatch?.[1] ?? firstLine;
@@ -28,18 +39,24 @@ function parseSection(raw: string): ParsedSection {
     meta,
     bullets: contentLines.filter((l) => l.trim().startsWith("- ")),
     plainLines: contentLines.filter((l) => !l.trim().startsWith("- ") && l.trim() !== ""),
+    timestamp,
   };
 }
 
+const DATE_RE = /\s*·?\s*\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b/g;
+
 // Renders a line that may contain Jira keys (bare or as [KEY](url)) and plain text
-function InlineMeta({ text, jiraBaseUrl }: { text: string; jiraBaseUrl?: string }) {
+function InlineMeta({ text, jiraBaseUrl, timestamp }: { text: string; jiraBaseUrl?: string; timestamp?: string | null }) {
+  // If we have a precise timestamp, strip the agent-written date — we'll show LocalTime instead
+  const baseText = timestamp ? text.replace(DATE_RE, "").trim() : text;
   // Strip any existing [KEY](url) links to bare keys — avoids double-linking and removes stale URLs
-  const stripped = text.replace(/\[([A-Z][A-Z0-9]+-\d+)\]\([^)]*\)/g, "$1");
+  const stripped = baseText.replace(/\[([A-Z][A-Z0-9]+-\d+)\]\([^)]*\)/g, "$1");
   // Re-link bare keys using the configured domain
   const processed = jiraBaseUrl
     ? stripped.replace(/\b([A-Z][A-Z0-9]+-\d+)\b/g, (key) => `[${key}](${jiraBaseUrl}/browse/${key})`)
     : stripped;
   const parts = processed.split(/(\[[^\]]+\]\([^)]+\))/g);
+  const hasVisibleParts = parts.some((p) => p.trim().length > 0);
   return (
     <span className="flex flex-wrap items-center gap-x-1 text-xs text-zinc-400 mt-0.5">
       {parts.map((part, i) => {
@@ -60,6 +77,8 @@ function InlineMeta({ text, jiraBaseUrl }: { text: string; jiraBaseUrl?: string 
         }
         return <span key={i}>{part}</span>;
       })}
+      {timestamp && hasVisibleParts && <span>·</span>}
+      {timestamp && <LocalTime iso={timestamp} className="text-xs text-zinc-400" />}
     </span>
   );
 }
@@ -103,7 +122,9 @@ export function UpdateContent({ content, jiraBaseUrl }: { content: string; jiraB
                 <span className="text-sm font-medium text-zinc-900 leading-snug">
                   {section.headline}
                 </span>
-                {section.meta && <InlineMeta text={section.meta} jiraBaseUrl={jiraBaseUrl} />}
+                {(section.meta || section.timestamp) && (
+                  <InlineMeta text={section.meta ?? ""} jiraBaseUrl={jiraBaseUrl} timestamp={section.timestamp} />
+                )}
               </div>
               {hasDetails && (
                 isExpanded

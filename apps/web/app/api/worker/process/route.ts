@@ -148,11 +148,14 @@ export async function POST(request: NextRequest) {
         select: { content: true, commitShas: true },
       });
 
+      const ts = new Date().toISOString();
+      const stampedContent = `<!-- ts:${ts} -->\n${output.content}`;
+
       if (existing) {
         await prisma.update.update({
           where: { productLineId_isoWeek_year: { productLineId: output.productLineId, isoWeek, year } },
           data: {
-            content: `${existing.content}\n\n---\n\n${output.content}`,
+            content: `${existing.content}\n\n---\n\n${stampedContent}`,
             commitShas: [...(existing.commitShas as string[]), ...gitEvent.commits.map((c) => c.sha)],
           },
         });
@@ -162,7 +165,7 @@ export async function POST(request: NextRequest) {
             productLineId: output.productLineId,
             isoWeek,
             year,
-            content: output.content,
+            content: stampedContent,
             commitShas: gitEvent.commits.map((c) => c.sha),
             diffSummary: gitEvent.diffSummary,
           },
