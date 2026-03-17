@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { UpdateContent } from "@/components/update-content";
+import { LocalTime } from "@/components/local-time";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -119,9 +120,12 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
                   <div className="space-y-10">
                     {selectedPl.updates.map((update) => (
                       <div key={update.id}>
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-                          Week {update.isoWeek}, {update.year}
-                        </p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                            Week {update.isoWeek}, {update.year}
+                          </p>
+                          <LocalTime iso={update.updatedAt.toISOString()} className="text-xs text-zinc-400" />
+                        </div>
                         <UpdateContent content={update.content} jiraBaseUrl={jiraBaseUrl} />
                       </div>
                     ))}

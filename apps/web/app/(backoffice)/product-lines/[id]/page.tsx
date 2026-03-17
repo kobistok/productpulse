@@ -6,6 +6,7 @@ import { Bot, GitBranch, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { UpdateContent } from "@/components/update-content";
+import { LocalTime } from "@/components/local-time";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -121,9 +122,10 @@ export default async function ProductLineOverviewPage({ params }: Props) {
           <div className="space-y-3">
             {productLine.updates.map((u) => (
               <div key={u.id} className="bg-white border border-zinc-200 rounded-xl p-5">
-                <p className="text-xs font-medium text-zinc-400 mb-3">
-                  W{u.isoWeek} {u.year}
-                </p>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-xs font-medium text-zinc-400">W{u.isoWeek} {u.year}</p>
+                  <LocalTime iso={u.updatedAt.toISOString()} className="text-xs text-zinc-400" />
+                </div>
                 <UpdateContent content={u.content} jiraBaseUrl={jiraBaseUrl} />
               </div>
             ))}
