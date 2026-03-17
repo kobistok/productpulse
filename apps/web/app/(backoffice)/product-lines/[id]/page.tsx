@@ -124,6 +124,7 @@ export default async function ProductLineOverviewPage({ params }: Props) {
               <div key={u.id} className="bg-white border border-zinc-200 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <p className="text-xs font-medium text-zinc-400">W{u.isoWeek} {u.year}</p>
+                  <span className="text-xs text-zinc-300">·</span>
                   <LocalTime iso={u.updatedAt.toISOString()} className="text-xs text-zinc-400" />
                 </div>
                 <UpdateContent content={u.content} jiraBaseUrl={jiraBaseUrl} />

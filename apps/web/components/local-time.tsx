@@ -12,11 +12,12 @@ export function LocalTime({ iso, className }: Props) {
 
   useEffect(() => {
     setFormatted(
-      new Date(iso).toLocaleString(undefined, {
+      new Date(iso).toLocaleString("en-US", {
         month: "short",
         day: "numeric",
-        hour: "numeric",
+        hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       })
     );
   }, [iso]);

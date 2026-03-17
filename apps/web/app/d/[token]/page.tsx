@@ -124,6 +124,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
                           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                             Week {update.isoWeek}, {update.year}
                           </p>
+                          <span className="text-xs text-zinc-300">·</span>
                           <LocalTime iso={update.updatedAt.toISOString()} className="text-xs text-zinc-400" />
                         </div>
                         <UpdateContent content={update.content} jiraBaseUrl={jiraBaseUrl} />
