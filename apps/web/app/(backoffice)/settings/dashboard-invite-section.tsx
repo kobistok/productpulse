@@ -28,6 +28,12 @@ export function DashboardInviteSection({ orgId, invites: initialInvites }: Props
     });
     if (res.ok) {
       const invite = await res.json();
+      (window as any).pendo?.track("dashboard_link_created", {
+        org_id: orgId,
+        invite_id: invite.id,
+        has_label: Boolean(label.trim()),
+        label: label || "",
+      });
       setInvites((prev) => [invite, ...prev]);
       setShowForm(false);
       setLabel("");

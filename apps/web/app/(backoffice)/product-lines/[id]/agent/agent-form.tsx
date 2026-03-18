@@ -39,6 +39,13 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
     });
 
     if (res.ok) {
+      (window as any).pendo?.track("agent_configured", {
+        product_line_id: productLineId,
+        model,
+        system_prompt_length: systemPrompt.length,
+        is_default_prompt: systemPrompt === DEFAULT_SYSTEM_PROMPT,
+        is_first_configuration: !agent,
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } else {
