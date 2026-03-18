@@ -183,34 +183,46 @@ export async function runContentAgent(input: ContentAgentInput): Promise<Content
 ${contextSection}${outputTypesSection}${skillsSection}${updatesSection}
 Review the product line updates above and produce the requested customer-facing content. Apply the org skills as style and format guidelines. Use the provided tools to submit each piece of content.`;
 
+  const allTools = {
+    create_kb_article: tool({
+      description: "Create a knowledge base article for customers explaining a feature or change.",
+      parameters: z.object({
+        title: z.string().describe("The title of the KB article"),
+        content: z.string().describe("The full markdown content of the KB article"),
+      }),
+      execute: async ({ title, content }) => {
+        outputs.push({ outputType: "kb", title, content });
+        return { success: true };
+      },
+    }),
+    create_customer_update: tool({
+      description: "Create a customer-facing release note or update summary.",
+      parameters: z.object({
+        title: z.string().describe("The title of the customer update"),
+        content: z.string().describe("The full markdown content of the customer update"),
+      }),
+      execute: async ({ title, content }) => {
+        outputs.push({ outputType: "customer_update", title, content });
+        return { success: true };
+      },
+    }),
+  };
+
+  // Only expose tools matching the requested output types
+  const tools = Object.fromEntries(
+    Object.entries(allTools).filter(([key]) => {
+      if (key === "create_kb_article") return input.outputTypes.includes("kb");
+      if (key === "create_customer_update") return input.outputTypes.includes("customer_update");
+      return false;
+    })
+  ) as typeof allTools;
+
   await generateText({
     model: anthropic("claude-sonnet-4-6"),
     system: CONTENT_AGENT_SYSTEM_PROMPT,
     prompt,
-    tools: {
-      create_kb_article: tool({
-        description: "Create a knowledge base article for customers explaining a feature or change.",
-        parameters: z.object({
-          title: z.string().describe("The title of the KB article"),
-          content: z.string().describe("The full markdown content of the KB article"),
-        }),
-        execute: async ({ title, content }) => {
-          outputs.push({ outputType: "kb", title, content });
-          return { success: true };
-        },
-      }),
-      create_customer_update: tool({
-        description: "Create a customer-facing release note or update summary.",
-        parameters: z.object({
-          title: z.string().describe("The title of the customer update"),
-          content: z.string().describe("The full markdown content of the customer update"),
-        }),
-        execute: async ({ title, content }) => {
-          outputs.push({ outputType: "customer_update", title, content });
-          return { success: true };
-        },
-      }),
-    },
+    tools,
+    toolChoice: "required",
     maxSteps: 5,
   });
 

@@ -73,6 +73,13 @@ export async function POST(
     year: u.year,
   }));
 
+  if (productLineUpdates.length === 0) {
+    return NextResponse.json(
+      { error: "No updates found for the selected timeframe. Try a broader timeframe like 'Last 4 weeks'." },
+      { status: 422 }
+    );
+  }
+
   const results = await runContentAgent({
     name: agent.name,
     specificContext: agent.specificContext,
@@ -82,7 +89,7 @@ export async function POST(
   });
 
   if (results.length === 0) {
-    return NextResponse.json({ error: "Agent produced no outputs" }, { status: 422 });
+    return NextResponse.json({ error: "Agent produced no outputs. Try a broader timeframe." }, { status: 422 });
   }
 
   const now = new Date();
