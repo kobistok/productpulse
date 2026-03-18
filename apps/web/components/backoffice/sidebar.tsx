@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Settings, LogOut, Users, X } from "lucide-react";
+import { LayoutGrid, Settings, LogOut, Users, X, FileText } from "lucide-react";
 import { signOut } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import type { User, Organization } from "@productpulse/db";
 
 const NAV_ITEMS = [
   { href: "/product-lines", label: "Product Lines", icon: LayoutGrid },
+  { href: "/content", label: "Content", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

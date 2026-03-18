@@ -135,6 +135,88 @@ export async function runProductPulseAgent(
   return outputs;
 }
 
+export interface ContentAgentInput {
+  name: string;
+  specificContext: string | null;
+  outputTypes: string[];
+  orgSkills: Array<{ name: string; content: string }>;
+  productLineUpdates: Array<{ productLineName: string; content: string; isoWeek: number; year: number }>;
+}
+
+export interface ContentAgentOutput {
+  outputType: string;
+  title: string;
+  content: string;
+}
+
+const CONTENT_AGENT_SYSTEM_PROMPT = `You are a content agent that transforms internal product updates into polished customer-facing content.
+
+Your role:
+- Read the provided product line updates (written for engineers/stakeholders)
+- Apply the provided org skills (tone, style, format guidelines)
+- Produce customer-facing content that is clear, engaging, and appropriately scoped
+
+Output types:
+- "kb": A knowledge base article. Structured, instructional, written for users who need to understand or use a feature.
+- "customer_update": A concise customer-facing release note or update summary. Highlights what's new and why it matters.
+
+Always use the tools provided to create your outputs. Do not produce any text outside of tool calls.`;
+
+export async function runContentAgent(input: ContentAgentInput): Promise<ContentAgentOutput[]> {
+  const outputs: ContentAgentOutput[] = [];
+
+  const skillsSection = input.orgSkills.length > 0
+    ? `\n## Org Skills (style/format guidelines)\n${input.orgSkills.map(s => `### ${s.name}\n${s.content}`).join("\n\n")}\n`
+    : "";
+
+  const updatesSection = input.productLineUpdates.length > 0
+    ? `\n## Product Line Updates\n${input.productLineUpdates.map(u => `### ${u.productLineName} (Week ${u.isoWeek}/${u.year})\n${u.content}`).join("\n\n")}\n`
+    : "\n## Product Line Updates\nNo updates available for the selected timeframe.\n";
+
+  const contextSection = input.specificContext
+    ? `\n## Specific Context\n${input.specificContext}\n`
+    : "";
+
+  const outputTypesSection = `\n## Required Output Types\nCreate content for the following types: ${input.outputTypes.join(", ")}\n`;
+
+  const prompt = `You are the "${input.name}" content agent.
+${contextSection}${outputTypesSection}${skillsSection}${updatesSection}
+Review the product line updates above and produce the requested customer-facing content. Apply the org skills as style and format guidelines. Use the provided tools to submit each piece of content.`;
+
+  await generateText({
+    model: anthropic("claude-sonnet-4-6"),
+    system: CONTENT_AGENT_SYSTEM_PROMPT,
+    prompt,
+    tools: {
+      create_kb_article: tool({
+        description: "Create a knowledge base article for customers explaining a feature or change.",
+        parameters: z.object({
+          title: z.string().describe("The title of the KB article"),
+          content: z.string().describe("The full markdown content of the KB article"),
+        }),
+        execute: async ({ title, content }) => {
+          outputs.push({ outputType: "kb", title, content });
+          return { success: true };
+        },
+      }),
+      create_customer_update: tool({
+        description: "Create a customer-facing release note or update summary.",
+        parameters: z.object({
+          title: z.string().describe("The title of the customer update"),
+          content: z.string().describe("The full markdown content of the customer update"),
+        }),
+        execute: async ({ title, content }) => {
+          outputs.push({ outputType: "customer_update", title, content });
+          return { success: true };
+        },
+      }),
+    },
+    maxSteps: 5,
+  });
+
+  return outputs;
+}
+
 function buildPrompt(
   productLine: AgentProductLine,
   gitEvent: GitEvent,

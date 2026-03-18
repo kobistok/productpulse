@@ -27,6 +27,8 @@ model Organization {
   productLines     ProductLine[]
   invites          Invite[]
   dashboardInvites DashboardInvite[]
+  orgSkills        OrgSkill[]
+  contentAgents    ContentAgent[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 }
@@ -176,6 +178,47 @@ model Update {
   updatedAt     DateTime    @updatedAt
 
   @@unique([productLineId, isoWeek, year])
+}
+
+model OrgSkill {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  content   String       @db.Text
+  createdBy String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model ContentAgent {
+  id              String          @id @default(cuid())
+  orgId           String
+  org             Organization    @relation(fields: [orgId], references: [id])
+  name            String
+  specificContext String?         @db.Text
+  outputTypes     String[]
+  productLineIds  String[]
+  model           String          @default("claude-sonnet-4-6")
+  shareToken      String?         @unique
+  outputs         ContentOutput[]
+  createdBy       String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model ContentOutput {
+  id             String       @id @default(cuid())
+  contentAgentId String
+  contentAgent   ContentAgent @relation(fields: [contentAgentId], references: [id], onDelete: Cascade)
+  outputType     String
+  title          String
+  content        String       @db.Text
+  status         String       @default("draft")
+  isoWeek        Int
+  year           Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 // Shareable read-only dashboard link (no login required)
