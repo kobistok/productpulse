@@ -29,6 +29,7 @@ export default function LoginPage() {
         const err = Object.assign(new Error(errorMsg), { code: data?.code ?? String(res.status) });
         throw err;
       }
+      (window as any).pendo?.track("user_signed_in", { auth_provider: "google" });
       router.push("/product-lines");
       router.refresh();
     } catch (err) {

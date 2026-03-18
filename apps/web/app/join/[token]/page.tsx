@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { pendoTrackServer } from "@/lib/pendo";
 import { JoinClient } from "./join-client";
 
 interface Props {
@@ -49,6 +50,18 @@ export default async function JoinPage({ params }: Props) {
         }),
         prisma.invite.delete({ where: { id: invite.id } }),
       ]);
+      await pendoTrackServer({
+        event: "team_member_joined",
+        visitorId: session.id,
+        accountId: invite.orgId,
+        properties: {
+          org_id: invite.orgId,
+          org_name: invite.org.name,
+          invite_token: token,
+          role: invite.role,
+          auth_provider: "google",
+        },
+      });
     }
     redirect("/product-lines");
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { enqueueAgentJob } from "@/lib/cloud-tasks";
+import { pendoTrackServer } from "@/lib/pendo";
 import { createHmac, timingSafeEqual } from "crypto";
 
 function logEvent(
@@ -130,6 +131,20 @@ export async function POST(
       where: { id: triggerId },
       data: { fireCount: { increment: 1 } },
     }).catch((err) => console.error("[webhook] Failed to increment fireCount:", err));
+
+    pendoTrackServer({
+      event: "webhook_received",
+      visitorId: "system",
+      accountId: trigger.productLine.orgId,
+      properties: {
+        trigger_id: triggerId,
+        product_line_id: trigger.productLineId,
+        org_id: trigger.productLine.orgId,
+        repo: repo ?? "unknown",
+        branch: branch ?? "unknown",
+        commit_count: Array.isArray(normalized.commits) ? normalized.commits.length : 0,
+      },
+    }).catch(() => null);
 
     return NextResponse.json({ queued: true });
   } catch (err) {
