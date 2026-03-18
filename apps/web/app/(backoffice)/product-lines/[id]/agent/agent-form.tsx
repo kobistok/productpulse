@@ -42,8 +42,6 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
       (window as any).pendo?.track("agent_configured", {
         product_line_id: productLineId,
         model,
-        system_prompt_length: systemPrompt.length,
-        is_default_prompt: systemPrompt === DEFAULT_SYSTEM_PROMPT,
         is_first_configuration: !agent,
       });
       setSaved(true);
