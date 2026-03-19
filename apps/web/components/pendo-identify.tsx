@@ -22,25 +22,27 @@ interface PendoIdentifyProps {
 
 export function PendoIdentify({ visitor, account }: PendoIdentifyProps) {
   useEffect(() => {
-    if (typeof pendo !== "undefined") {
-      pendo.identify({
-        visitor: {
-          id: visitor.id,
-          email: visitor.email,
-          full_name: visitor.full_name ?? undefined,
-          avatarUrl: visitor.avatarUrl ?? undefined,
-          createdAt: visitor.createdAt,
-          role: visitor.role,
-          orgId: visitor.orgId,
-        },
-        account: {
-          id: account.id,
-          name: account.name,
-          slug: account.slug,
-          createdAt: account.createdAt,
-        },
-      });
-    }
+    if (typeof pendo === "undefined") return;
+
+    const payload = {
+      visitor: {
+        id: visitor.id,
+        email: visitor.email,
+        full_name: visitor.full_name ?? undefined,
+        avatarUrl: visitor.avatarUrl ?? undefined,
+        createdAt: visitor.createdAt,
+        role: visitor.role,
+        orgId: visitor.orgId,
+      },
+      account: {
+        id: account.id,
+        name: account.name,
+        slug: account.slug,
+        createdAt: account.createdAt,
+      },
+    };
+
+    pendo.initialize(payload);
   }, [visitor, account]);
 
   return null;
