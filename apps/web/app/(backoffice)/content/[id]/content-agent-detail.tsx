@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Copy, Check, Globe, Link2Off, Expand, X } from "lucide-react";
+import { Sparkles, Copy, Check, Globe, Link2Off, Expand, X, Loader2 } from "lucide-react";
 import type { ContentAgent, ContentOutput } from "@productpulse/db";
+
+type ZendeskArticle = { id: number; title: string; url: string };
 
 type AgentWithOutputs = ContentAgent & { outputs: ContentOutput[] };
 
@@ -206,11 +208,39 @@ interface OutputCardProps {
 function OutputCard({ output, onToggleStatus, onCopyContent, isToggling }: OutputCardProps) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [suggestLoadingId, setSuggestLoadingId] = useState<number | null>(null);
+  const [suggestion, setSuggestion] = useState<{ articleTitle: string; text: string } | null>(null);
+  const [suggestionCopied, setSuggestionCopied] = useState(false);
+
+  const articles: ZendeskArticle[] = output.zendeskArticles
+    ? (JSON.parse(output.zendeskArticles) as ZendeskArticle[])
+    : [];
 
   async function handleCopy() {
     await onCopyContent(output.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleSuggestEdit(article: ZendeskArticle) {
+    setSuggestLoadingId(article.id);
+    const res = await fetch(`/api/content-outputs/${output.id}/suggest-edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ articleId: article.id, articleTitle: article.title, articleUrl: article.url }),
+    });
+    if (res.ok) {
+      const { suggestion: text } = await res.json();
+      setSuggestion({ articleTitle: article.title, text });
+    }
+    setSuggestLoadingId(null);
+  }
+
+  async function copySuggestion() {
+    if (!suggestion) return;
+    await navigator.clipboard.writeText(suggestion.text);
+    setSuggestionCopied(true);
+    setTimeout(() => setSuggestionCopied(false), 2000);
   }
 
   return (
@@ -267,6 +297,37 @@ function OutputCard({ output, onToggleStatus, onCopyContent, isToggling }: Outpu
             {output.content}
           </div>
         </div>
+
+        {articles.length > 0 && (
+          <div className="px-5 py-3 border-t border-zinc-100 bg-zinc-50">
+            <p className="text-xs font-medium text-zinc-500 mb-2">Related Zendesk articles</p>
+            <div className="space-y-1.5">
+              {articles.map((article) => (
+                <div key={article.id} className="flex items-center justify-between gap-3">
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline truncate"
+                  >
+                    {article.title}
+                  </a>
+                  <button
+                    onClick={() => handleSuggestEdit(article)}
+                    disabled={suggestLoadingId === article.id}
+                    className="text-xs text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded px-2 py-0.5 bg-white transition-colors shrink-0 flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {suggestLoadingId === article.id ? (
+                      <><Loader2 size={10} className="animate-spin" /> Generating...</>
+                    ) : (
+                      "Suggest Edit"
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {expanded && (
@@ -290,6 +351,45 @@ function OutputCard({ output, onToggleStatus, onCopyContent, isToggling }: Outpu
             <div className="px-6 py-5 overflow-y-auto">
               <div className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
                 {output.content}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {suggestion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setSuggestion(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Suggested edits</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{suggestion.articleTitle}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copySuggestion}
+                  className="text-xs text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded px-2 py-1 flex items-center gap-1 transition-colors"
+                >
+                  {suggestionCopied ? <Check size={11} className="text-green-600" /> : <Copy size={11} />}
+                  {suggestionCopied ? "Copied" : "Copy"}
+                </button>
+                <button
+                  onClick={() => setSuggestion(null)}
+                  className="text-zinc-400 hover:text-zinc-700 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-5 overflow-y-auto">
+              <div className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+                {suggestion.text}
               </div>
             </div>
           </div>

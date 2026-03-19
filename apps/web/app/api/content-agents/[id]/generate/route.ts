@@ -4,6 +4,34 @@ import { prisma } from "@/lib/db";
 import { runContentAgent } from "@productpulse/agent";
 import { getISOWeek, getISOWeekYear, subWeeks } from "date-fns";
 
+type ZendeskArticle = { id: number; title: string; url: string };
+
+async function searchZendeskArticles(
+  config: { subdomain: string; email: string; apiToken: string },
+  productLineUpdates: Array<{ content: string }>
+): Promise<ZendeskArticle[]> {
+  try {
+    const query = productLineUpdates
+      .map((u) => u.content.slice(0, 150))
+      .join(" ")
+      .slice(0, 300);
+
+    const auth = Buffer.from(`${config.email}/token:${config.apiToken}`).toString("base64");
+    const url = `https://${config.subdomain}.zendesk.com/api/v2/help_center/search?query=${encodeURIComponent(query)}&per_page=5`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as { results?: Array<{ id: number; title: string; html_url: string }> };
+    return (data.results ?? []).map((r) => ({ id: r.id, title: r.title, url: r.html_url }));
+  } catch {
+    return [];
+  }
+}
+
 type Timeframe = "today" | "this_week" | "last_week" | "last_2_weeks" | "last_4_weeks";
 
 function getWeeksForTimeframe(timeframe: Timeframe): Array<{ isoWeek: number; year: number }> {
@@ -80,6 +108,13 @@ export async function POST(
     );
   }
 
+  // Fetch Zendesk articles if configured
+  const zendeskConfig = await prisma.zendeskConfig.findUnique({ where: { orgId } });
+  const zendeskArticles = zendeskConfig
+    ? await searchZendeskArticles(zendeskConfig, productLineUpdates)
+    : [];
+  const zendeskArticlesJson = zendeskArticles.length > 0 ? JSON.stringify(zendeskArticles) : null;
+
   const results = await runContentAgent({
     name: agent.name,
     specificContext: agent.specificContext,
@@ -107,6 +142,7 @@ export async function POST(
           status: "draft",
           isoWeek,
           year,
+          zendeskArticles: zendeskArticlesJson,
         },
       })
     )

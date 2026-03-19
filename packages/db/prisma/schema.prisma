@@ -29,6 +29,7 @@ model Organization {
   dashboardInvites DashboardInvite[]
   orgSkills        OrgSkill[]
   contentAgents    ContentAgent[]
+  zendeskConfig    ZendeskConfig?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 }
@@ -208,17 +209,29 @@ model ContentAgent {
 }
 
 model ContentOutput {
-  id             String       @id @default(cuid())
-  contentAgentId String
-  contentAgent   ContentAgent @relation(fields: [contentAgentId], references: [id], onDelete: Cascade)
-  outputType     String
-  title          String
-  content        String       @db.Text
-  status         String       @default("draft")
-  isoWeek        Int
-  year           Int
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  contentAgentId  String
+  contentAgent    ContentAgent @relation(fields: [contentAgentId], references: [id], onDelete: Cascade)
+  outputType      String
+  title           String
+  content         String       @db.Text
+  status          String       @default("draft")
+  isoWeek         Int
+  year            Int
+  zendeskArticles String?      @db.Text // JSON: Array<{ id: number; title: string; url: string }>
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model ZendeskConfig {
+  id        String       @id @default(cuid())
+  orgId     String       @unique
+  org       Organization @relation(fields: [orgId], references: [id])
+  subdomain String
+  email     String
+  apiToken  String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 // Shareable read-only dashboard link (no login required)
