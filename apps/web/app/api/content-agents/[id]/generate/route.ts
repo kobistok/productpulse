@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { runContentAgent } from "@productpulse/agent";
+import { runContentAgent, runContentRefinementAgent } from "@productpulse/agent";
+import { searchGoogleDrive } from "@/lib/google-drive";
 import { getISOWeek, getISOWeekYear, subWeeks } from "date-fns";
 
 type ZendeskArticle = { id: number; title: string; url: string };
@@ -108,20 +109,34 @@ export async function POST(
     );
   }
 
-  // Fetch Zendesk articles if configured
-  const zendeskConfig = await prisma.zendeskConfig.findUnique({ where: { orgId } });
+  // Fetch Zendesk articles and Google Drive config in parallel
+  const [zendeskConfig, googleDriveConfig] = await Promise.all([
+    prisma.zendeskConfig.findUnique({ where: { orgId } }),
+    prisma.googleDriveConfig.findUnique({ where: { orgId } }),
+  ]);
+
   const zendeskArticles = zendeskConfig
     ? await searchZendeskArticles(zendeskConfig, productLineUpdates)
     : [];
   const zendeskArticlesJson = zendeskArticles.length > 0 ? JSON.stringify(zendeskArticles) : null;
 
-  const results = await runContentAgent({
+  let results = await runContentAgent({
     name: agent.name,
     specificContext: agent.specificContext,
     outputTypes: agent.outputTypes,
     orgSkills,
     productLineUpdates,
   });
+
+  // Refine each output with relevant Google Drive docs (if connected)
+  if (googleDriveConfig) {
+    results = await Promise.all(
+      results.map(async (output) => {
+        const docs = await searchGoogleDrive(orgId, output.title);
+        return runContentRefinementAgent(output, docs);
+      })
+    );
+  }
 
   if (results.length === 0) {
     return NextResponse.json({ error: "Agent produced no outputs. Try a broader timeframe." }, { status: 422 });

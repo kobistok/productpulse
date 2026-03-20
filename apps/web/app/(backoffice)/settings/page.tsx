@@ -4,6 +4,7 @@ import { InviteSection } from "./invite-section";
 import { DashboardInviteSection } from "./dashboard-invite-section";
 import { OrgNameSection } from "./org-name-section";
 import { ZendeskSection } from "./zendesk-section";
+import { GoogleDriveSection } from "./google-drive-section";
 
 export default async function SettingsPage() {
   const user = await requireSession();
@@ -12,11 +13,12 @@ export default async function SettingsPage() {
 
   if (!org) return null;
 
-  const [invites, dashboardInvites, members, zendeskConfig] = await Promise.all([
+  const [invites, dashboardInvites, members, zendeskConfig, googleDriveConfig] = await Promise.all([
     prisma.invite.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "desc" }, take: 20 }),
     prisma.dashboardInvite.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "desc" }, take: 20 }),
     prisma.membership.findMany({ where: { orgId: org.id }, include: { user: true }, orderBy: { createdAt: "asc" } }),
     prisma.zendeskConfig.findUnique({ where: { orgId: org.id } }),
+    prisma.googleDriveConfig.findUnique({ where: { orgId: org.id } }),
   ]);
 
   const isAdmin = membership.role === "ADMIN";
@@ -64,8 +66,17 @@ export default async function SettingsPage() {
       {/* Dashboard Invites */}
       <DashboardInviteSection orgId={org.id} invites={dashboardInvites} />
 
-      {/* Zendesk */}
-      <ZendeskSection config={zendeskConfig ? { subdomain: zendeskConfig.subdomain, email: zendeskConfig.email } : null} />
+      {/* Integrations */}
+      <section>
+        <h2 className="text-sm font-semibold text-zinc-900 mb-3">Integrations</h2>
+        <div className="space-y-3">
+          <ZendeskSection config={zendeskConfig ? { subdomain: zendeskConfig.subdomain, email: zendeskConfig.email } : null} />
+          <GoogleDriveSection
+            connected={!!googleDriveConfig}
+            email={googleDriveConfig?.email ?? null}
+          />
+        </div>
+      </section>
     </div>
   );
 }

@@ -229,6 +229,48 @@ Review the product line updates above and produce the requested customer-facing 
   return outputs;
 }
 
+export interface DriveDoc {
+  id: string;
+  name: string;
+  content: string;
+}
+
+export async function runContentRefinementAgent(
+  draft: ContentAgentOutput,
+  driveDocs: DriveDoc[]
+): Promise<ContentAgentOutput> {
+  if (driveDocs.length === 0) return draft;
+
+  const docsSection = driveDocs
+    .map((d, i) => `### Document ${i + 1}: ${d.name}\n${d.content}`)
+    .join("\n\n");
+
+  const typeLabel = draft.outputType === "kb" ? "KB Article" : "Customer Update";
+
+  const { text } = await generateText({
+    model: anthropic("claude-sonnet-4-6"),
+    system: `You are refining a customer-facing ${typeLabel} using additional company documentation from Google Drive.
+Improve the draft by incorporating relevant specifics, accurate details, and context from the documents.
+Rules:
+- Keep the same tone, format, and structure as the draft
+- Only add information that genuinely improves accuracy or usefulness
+- Do not pad or lengthen unnecessarily — quality over quantity
+- If the documents contain nothing relevant, return the draft unchanged
+- Return ONLY the refined content, no preamble or explanation`,
+    prompt: `## Draft ${typeLabel}: ${draft.title}
+
+${draft.content}
+
+## Company documentation from Google Drive
+
+${docsSection}
+
+Refine the draft using any relevant information from the documents above. Return only the refined content.`,
+  });
+
+  return { ...draft, content: text };
+}
+
 function buildPrompt(
   productLine: AgentProductLine,
   gitEvent: GitEvent,
