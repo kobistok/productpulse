@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
   const returnedState = searchParams.get("state");
   const error = searchParams.get("error");
 
-  const settingsUrl = new URL("/settings", request.url).toString();
+  const baseUrl = new URL(process.env.GOOGLE_REDIRECT_URI!).origin;
+  const settingsUrl = `${baseUrl}/settings`;
 
   if (error || !code || !returnedState) {
     return NextResponse.redirect(`${settingsUrl}?error=google_auth_failed`);
