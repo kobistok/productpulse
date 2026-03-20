@@ -109,6 +109,13 @@ export function GoogleDriveSection({ connected: initialConnected, email: initial
                   <p className="text-xs text-zinc-400">
                     Only read access to your Drive is requested. No files are modified.
                   </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                    <p className="text-xs text-amber-800 font-medium mb-0.5">Heads up</p>
+                    <p className="text-xs text-amber-700">
+                      Google will show a &quot;This app isn&apos;t verified&quot; warning. This is expected for new integrations.
+                      Click <strong>Advanced</strong> → <strong>Go to ProductPulse (unsafe)</strong> to continue. We&apos;ve submitted for verification and this warning will disappear once approved.
+                    </p>
+                  </div>
                   <div className="flex justify-end pt-1">
                     <Button
                       size="sm"
