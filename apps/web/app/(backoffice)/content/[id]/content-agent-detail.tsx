@@ -32,6 +32,7 @@ export function ContentAgentDetail({ agent }: ContentAgentDetailProps) {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"all" | "kb" | "customer_update">("all");
 
   async function handleGenerate(timeframe: Timeframe) {
     setGenerating(true);
@@ -95,7 +96,11 @@ export function ContentAgentDetail({ agent }: ContentAgentDetailProps) {
   }
 
   // Group outputs by year + week
-  const grouped = groupOutputsByWeek(agent.outputs);
+  const filteredOutputs =
+    typeFilter === "all"
+      ? agent.outputs
+      : agent.outputs.filter((o) => o.outputType === typeFilter);
+  const grouped = groupOutputsByWeek(filteredOutputs);
 
   return (
     <div>
@@ -166,11 +171,39 @@ export function ContentAgentDetail({ agent }: ContentAgentDetailProps) {
         <p className="text-sm text-red-600 mb-4">{generationError}</p>
       )}
 
+      {/* Type filter */}
+      {agent.outputs.length > 0 && (
+        <div className="flex items-center gap-1 mb-6">
+          {(["all", "kb", "customer_update"] as const).map((f) => {
+            const label = f === "all" ? "All" : f === "kb" ? "KB Articles" : "Customer Updates";
+            return (
+              <button
+                key={f}
+                onClick={() => setTypeFilter(f)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                  typeFilter === f
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Outputs grouped by week */}
       {grouped.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-zinc-300 rounded-xl">
-          <p className="text-sm text-zinc-500">No content generated yet.</p>
-          <p className="text-xs text-zinc-400 mt-1">Click Generate to create your first draft.</p>
+          {agent.outputs.length === 0 ? (
+            <>
+              <p className="text-sm text-zinc-500">No content generated yet.</p>
+              <p className="text-xs text-zinc-400 mt-1">Click Generate to create your first draft.</p>
+            </>
+          ) : (
+            <p className="text-sm text-zinc-500">No outputs match this filter.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-8">
