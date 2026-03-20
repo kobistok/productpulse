@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 
 interface Props {
   orgId: string;
@@ -10,13 +11,15 @@ interface Props {
 }
 
 export function JiraSection({ orgId, existing }: Props) {
+  const [connected, setConnected] = useState(!!existing);
+  const [open, setOpen] = useState(false);
+
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? "");
   const [email, setEmail] = useState(existing?.email ?? "");
   const [apiToken, setApiToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [connected, setConnected] = useState(!!existing);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -30,7 +33,7 @@ export function JiraSection({ orgId, existing }: Props) {
       setConnected(true);
       setApiToken("");
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => { setSaved(false); setOpen(false); }, 1500);
     }
     setSaving(false);
   }
@@ -43,94 +46,130 @@ export function JiraSection({ orgId, existing }: Props) {
       setBaseUrl("");
       setEmail("");
       setApiToken("");
+      setOpen(false);
     }
     setDeleting(false);
   }
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-zinc-900">Jira</h2>
-          {connected && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
-              Connected
-            </span>
-          )}
-        </div>
-        {connected && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            {deleting ? "Removing..." : "Remove"}
-          </Button>
-        )}
-      </div>
-
-      <div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-4">
-        <p className="text-xs text-zinc-500">
-          When commit messages reference Jira tickets (e.g. <code className="font-mono">PROJ-123</code>),
-          the agent will automatically fetch and include ticket details in its context.
-        </p>
-
-        <form onSubmit={handleSave} className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-600">Jira base URL</label>
-            <Input
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://yourcompany.atlassian.net"
-              type="url"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-600">Jira account email</label>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@yourcompany.com"
-                type="email"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-600">
-                API Token {connected && <span className="text-zinc-400 font-normal">(leave blank to keep existing)</span>}
-              </label>
-              <Input
-                type="password"
-                value={apiToken}
-                onChange={(e) => setApiToken(e.target.value)}
-                placeholder={connected ? "••••••••" : "Enter Jira API token"}
-                required={!connected}
-              />
-            </div>
-          </div>
-
-          <p className="text-[11px] text-zinc-400">
-            Generate an API token at{" "}
-            <a
-              href="https://id.atlassian.com/manage-profile/security/api-tokens"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
+    <>
+      <div className="bg-white border border-zinc-200 rounded-xl px-5 py-4 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-zinc-900">Jira</p>
+            <span
+              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                connected
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-zinc-100 text-zinc-500 border-zinc-200"
+              }`}
             >
-              id.atlassian.com/manage-profile/security/api-tokens
-            </a>
+              {connected ? "Connected" : "Not connected"}
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            When commit messages reference Jira tickets (e.g. <code className="font-mono">PROJ-123</code>), the agent fetches ticket details for context.
           </p>
-
-          <Button type="submit" size="sm" disabled={saving}>
-            {saving ? "Saving..." : saved ? "Saved!" : connected ? "Update" : "Connect"}
-          </Button>
-        </form>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="shrink-0">
+          Edit
+        </Button>
       </div>
-    </section>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Jira</p>
+                {connected && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                    Connected
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setOpen(false)} className="text-zinc-400 hover:text-zinc-700 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="px-6 py-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-zinc-600">Jira base URL</label>
+                <Input
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://yourcompany.atlassian.net"
+                  type="url"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-600">Jira account email</label>
+                  <Input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@yourcompany.com"
+                    type="email"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-600">
+                    API Token{" "}
+                    {connected && <span className="text-zinc-400 font-normal">(leave blank to keep existing)</span>}
+                  </label>
+                  <Input
+                    type="password"
+                    value={apiToken}
+                    onChange={(e) => setApiToken(e.target.value)}
+                    placeholder={connected ? "••••••••" : "Enter Jira API token"}
+                    required={!connected}
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-zinc-400">
+                Generate an API token at{" "}
+                <a
+                  href="https://id.atlassian.com/manage-profile/security/api-tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  id.atlassian.com/manage-profile/security/api-tokens
+                </a>
+              </p>
+
+              <div className="flex items-center justify-between pt-1">
+                {connected ? (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {deleting ? "Removing..." : "Remove integration"}
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <Button type="submit" size="sm" disabled={saving}>
+                  {saving ? "Saving..." : saved ? "Saved!" : connected ? "Update" : "Connect"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
