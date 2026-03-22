@@ -587,7 +587,7 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
                         <DetailCell detail={buildDetail(ev)} />
                       </td>
                       <td className="px-4 py-2.5 text-right">
-                        {ev.status !== "queued" && (
+                        {ev.agentDecision && ev.agentDecision !== "update_created" && (
                           <button
                             onClick={() => handleRerun(ev.id)}
                             disabled={rerunning === ev.id || rerun?.status === "polling"}
