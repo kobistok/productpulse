@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap } from "lucide-react";
+import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap, RefreshCw, X } from "lucide-react";
 import type { GitTrigger } from "@productpulse/db";
 import type { TriggerEventWithTrigger } from "./page";
 
@@ -307,7 +307,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
       )}
 
       {/* Run log */}
-      <RunLog events={events} />
+      <RunLog events={events} productLineId={productLineId} />
     </div>
   );
 }
@@ -316,10 +316,68 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
 
 type LogFilter = "all" | "update" | "no_update" | "failed";
 
-function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
+type RerunState = {
+  originalEventId: string;
+  newEventId: string;
+  targetIsoWeek: number;
+  targetYear: number;
+  status: "polling" | "ready" | "approving" | "approved";
+  result: TriggerEventWithTrigger | null;
+};
+
+function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; productLineId: string }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [rerunning, setRerunning] = useState<string | null>(null); // eventId being re-run
+  const [rerun, setRerun] = useState<RerunState | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll for re-run result
+  useEffect(() => {
+    if (!rerun || rerun.status !== "polling") {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
+    }
+    if (pollRef.current) return;
+    pollRef.current = setInterval(async () => {
+      const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${rerun.newEventId}`);
+      if (!res.ok) return;
+      const ev: TriggerEventWithTrigger = await res.json();
+      if (ev.agentDecision) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        setRerun((r) => r ? { ...r, status: "ready", result: ev } : null);
+      }
+    }, 2000);
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [rerun, productLineId]);
+
+  async function handleRerun(eventId: string) {
+    setRerunning(eventId);
+    const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${eventId}/rerun`, { method: "POST" });
+    setRerunning(null);
+    if (!res.ok) return;
+    const { newEventId, targetIsoWeek, targetYear } = await res.json() as { newEventId: string; targetIsoWeek: number; targetYear: number };
+    setRerun({ originalEventId: eventId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null });
+  }
+
+  async function handleApprove() {
+    if (!rerun?.result?.updateContent) return;
+    setRerun((r) => r ? { ...r, status: "approving" } : null);
+    const res = await fetch(
+      `/api/product-lines/${productLineId}/trigger-events/${rerun.newEventId}/approve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isoWeek: rerun.targetIsoWeek, year: rerun.targetYear }),
+      }
+    );
+    if (res.ok) {
+      setRerun((r) => r ? { ...r, status: "approved" } : null);
+      setTimeout(() => setRerun(null), 3000);
+    }
+  }
 
   function toggleRow(id: string) {
     setExpandedRows((prev) => {
@@ -368,9 +426,62 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
   const failedCount = meaningful.filter((e) => e.status === "failed").length;
 
   return (
+    <>
+    {/* Re-run result modal */}
+    {rerun && rerun.status !== "polling" && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Re-run result</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Week {rerun.targetIsoWeek} · {rerun.targetYear}</p>
+            </div>
+            <button onClick={() => setRerun(null)} className="text-zinc-400 hover:text-zinc-700 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="px-6 py-5 overflow-y-auto flex-1">
+            {rerun.status === "approved" ? (
+              <div className="text-center py-8">
+                <Check size={32} className="text-green-500 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-zinc-900">Update saved!</p>
+                <p className="text-xs text-zinc-500 mt-1">Added to Week {rerun.targetIsoWeek} · {rerun.targetYear}</p>
+              </div>
+            ) : rerun.result?.agentDecision === "update_created" && rerun.result.updateContent ? (
+              <pre className="whitespace-pre-wrap text-sm text-zinc-700 font-sans leading-relaxed">
+                {rerun.result.updateContent}
+              </pre>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-zinc-500">Agent decided not to create an update.</p>
+                {rerun.result?.workerDetail && (
+                  <p className="text-xs text-zinc-400 mt-1">{rerun.result.workerDetail}</p>
+                )}
+              </div>
+            )}
+          </div>
+          {rerun.result?.agentDecision === "update_created" && rerun.status !== "approved" && (
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-zinc-100 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setRerun(null)}>Cancel</Button>
+              <Button size="sm" onClick={handleApprove} disabled={rerun.status === "approving"}>
+                {rerun.status === "approving" ? "Saving..." : `Approve · Week ${rerun.targetIsoWeek}/${rerun.targetYear}`}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-zinc-900 shrink-0">Run Log</h3>
+        <div className="flex items-center gap-2 shrink-0">
+          <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
+          {rerun?.status === "polling" && (
+            <span className="flex items-center gap-1 text-[11px] text-amber-600 font-medium">
+              <RefreshCw size={10} className="animate-spin" /> Re-running…
+            </span>
+          )}
+        </div>
         <input
           type="text"
           value={search}
@@ -409,6 +520,7 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
               <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-44">Source</th>
               <th className="text-left px-4 py-2.5 font-medium text-zinc-500 w-32">Status</th>
               <th className="text-left px-4 py-2.5 font-medium text-zinc-500">Details</th>
+              <th className="px-4 py-2.5 w-20"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
@@ -458,6 +570,18 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
                       <td className="px-4 py-2.5 text-zinc-500 w-full">
                         <DetailCell detail={buildDetail(ev)} />
                       </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {ev.status !== "queued" && (
+                          <button
+                            onClick={() => handleRerun(ev.id)}
+                            disabled={rerunning === ev.id || rerun?.status === "polling"}
+                            className="text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-40"
+                            title="Re-run agent for this event"
+                          >
+                            <RefreshCw size={12} className={rerunning === ev.id ? "animate-spin" : ""} />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                     {isExpanded && ev.updateContent && (
                       <tr className="bg-blue-50/40">
@@ -476,6 +600,7 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
         </table>
       </div>
     </div>
+    </>
   );
 }
 
