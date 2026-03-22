@@ -318,6 +318,7 @@ type LogFilter = "all" | "update" | "no_update" | "failed";
 
 function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
   const [filter, setFilter] = useState<LogFilter>("all");
+  const [search, setSearch] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   function toggleRow(id: string) {
@@ -333,7 +334,7 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
 
   if (meaningful.length === 0) return null;
 
-  const filtered =
+  const byStatus =
     filter === "all"
       ? meaningful
       : filter === "update"
@@ -341,6 +342,24 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
       : filter === "no_update"
       ? meaningful.filter((e) => e.agentDecision && e.agentDecision !== "update_created")
       : meaningful.filter((e) => e.status === "failed");
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? byStatus.filter((e) => {
+        const haystack = [
+          e.detail,
+          e.workerDetail,
+          e.repo,
+          e.branch,
+          e.trigger?.repoUrl,
+          e.updateContent,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
+    : byStatus;
 
   const updateCount = meaningful.filter((e) => e.agentDecision === "update_created").length;
   const noUpdateCount = meaningful.filter(
@@ -350,9 +369,16 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-900">Run Log</h3>
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-zinc-900 shrink-0">Run Log</h3>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by Jira ticket, repo, branch…"
+          className="flex-1 text-xs border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-300 placeholder:text-zinc-400"
+        />
+        <div className="flex items-center gap-1 shrink-0">
           {(["all", "update", "no_update", "failed"] as LogFilter[]).map((f) => {
             const label =
               f === "all" ? `All (${meaningful.length})` :
@@ -388,7 +414,9 @@ function RunLog({ events }: { events: TriggerEventWithTrigger[] }) {
           <tbody className="divide-y divide-zinc-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">No events match this filter.</td>
+                <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">
+                  {q ? `No results for "${search}"` : "No events match this filter."}
+                </td>
               </tr>
             ) : (
               filtered.map((ev) => {
