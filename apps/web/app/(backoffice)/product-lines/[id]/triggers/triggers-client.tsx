@@ -328,10 +328,13 @@ type RerunState = {
 function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; productLineId: string }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<TriggerEventWithTrigger[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [rerunning, setRerunning] = useState<string | null>(null); // eventId being re-run
   const [rerun, setRerun] = useState<RerunState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Poll for re-run result
   useEffect(() => {
@@ -352,6 +355,25 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
     }, 2000);
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [rerun, productLineId]);
+
+  // Debounced server search
+  useEffect(() => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    if (!search.trim()) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchDebounce.current = setTimeout(async () => {
+      const res = await fetch(
+        `/api/product-lines/${productLineId}/trigger-events?q=${encodeURIComponent(search.trim())}`
+      );
+      if (res.ok) setSearchResults(await res.json());
+      setSearching(false);
+    }, 400);
+    return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
+  }, [search, productLineId]);
 
   async function handleRerun(eventId: string) {
     setRerunning(eventId);
@@ -387,37 +409,24 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
     });
   }
 
-  // Exclude branch/path filter mismatches — pure noise, not meaningful run outcomes
-  const meaningful = events.filter((e) => e.status !== "skipped");
+  // When searching, use server results; otherwise use the initial 100
+  const source = searchResults ?? events.filter((e) => e.status !== "skipped");
 
-  if (meaningful.length === 0) return null;
+  if (source.length === 0 && !searching && !search.trim()) return null;
 
   const byStatus =
     filter === "all"
-      ? meaningful
+      ? source
       : filter === "update"
-      ? meaningful.filter((e) => e.agentDecision === "update_created")
+      ? source.filter((e) => e.agentDecision === "update_created")
       : filter === "no_update"
-      ? meaningful.filter((e) => e.agentDecision && e.agentDecision !== "update_created")
-      : meaningful.filter((e) => e.status === "failed");
+      ? source.filter((e) => e.agentDecision && e.agentDecision !== "update_created")
+      : source.filter((e) => e.status === "failed");
 
-  const q = search.trim().toLowerCase();
-  const filtered = q
-    ? byStatus.filter((e) => {
-        const haystack = [
-          e.detail,
-          e.workerDetail,
-          e.repo,
-          e.branch,
-          e.trigger?.repoUrl,
-          e.updateContent,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      })
-    : byStatus;
+  const filtered = byStatus;
+
+  // Counts for filter tabs — always based on source (not filtered)
+  const meaningful = source;
 
   const updateCount = meaningful.filter((e) => e.agentDecision === "update_created").length;
   const noUpdateCount = meaningful.filter(
@@ -482,13 +491,20 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
             </span>
           )}
         </div>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by Jira ticket, repo, branch…"
-          className="flex-1 text-xs border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-300 placeholder:text-zinc-400"
-        />
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search full history by Jira ticket, repo, branch…"
+            className="w-full text-xs border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-300 placeholder:text-zinc-400"
+          />
+          {searching && (
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <RefreshCw size={10} className="animate-spin text-zinc-400" />
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 shrink-0">
           {(["all", "update", "no_update", "failed"] as LogFilter[]).map((f) => {
             const label =
@@ -527,7 +543,7 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">
-                  {q ? `No results for "${search}"` : "No events match this filter."}
+                  {search.trim() ? `No results for "${search}"` : "No events match this filter."}
                 </td>
               </tr>
             ) : (
