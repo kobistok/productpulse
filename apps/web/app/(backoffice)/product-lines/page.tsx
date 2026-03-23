@@ -12,7 +12,7 @@ export default async function ProductLinesPage() {
     prisma.productLine.findMany({
       where: { orgId },
       include: {
-        agent: { select: { id: true } },
+        agent: { select: { id: true, ownerId: true } },
         _count: {
           select: {
             gitTriggers: true,
@@ -38,6 +38,13 @@ export default async function ProductLinesPage() {
 
   const updateCountMap = new Map(updateCountsRaw.map((r) => [r.productLineId, r._count.id]));
   const lastRunMap = new Map(lastRunsRaw.map((r) => [r.productLineId, r._max.createdAt]));
+
+  // Fetch owner users for all agents
+  const ownerIds = [...new Set(productLines.map((pl) => pl.agent?.ownerId).filter(Boolean) as string[])];
+  const owners = ownerIds.length > 0
+    ? await prisma.user.findMany({ where: { id: { in: ownerIds } }, select: { id: true, name: true, email: true, avatarUrl: true } })
+    : [];
+  const ownerMap = new Map(owners.map((u) => [u.id, u]));
 
   return (
     <div>
@@ -70,6 +77,7 @@ export default async function ProductLinesPage() {
           {productLines.map((pl) => {
             const updateCount = updateCountMap.get(pl.id) ?? 0;
             const lastRun = lastRunMap.get(pl.id);
+            const owner = pl.agent?.ownerId ? ownerMap.get(pl.agent.ownerId) : null;
             return (
               <Link
                 key={pl.id}
@@ -108,6 +116,18 @@ export default async function ProductLinesPage() {
                       </span>
                     )}
                   </div>
+                  {owner && (
+                    <div className="flex items-center gap-1.5 mt-2.5">
+                      {owner.avatarUrl ? (
+                        <img src={owner.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-zinc-200 flex items-center justify-center text-[9px] font-semibold text-zinc-600">
+                          {(owner.name ?? owner.email)[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-xs text-zinc-400">{owner.name ?? owner.email}</span>
+                    </div>
+                  )}
                 </div>
                 <ChevronRight
                   size={15}
