@@ -6,6 +6,7 @@ export interface AgentJob {
   payload: unknown;
   targetIsoWeek?: number;
   targetYear?: number;
+  forceRun?: boolean;
 }
 
 export async function enqueueAgentJob(job: AgentJob): Promise<void> {

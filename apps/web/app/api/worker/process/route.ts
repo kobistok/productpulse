@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   const job = await request.json();
-  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear } = job;
+  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun } = job;
   console.log("[worker] job:", JSON.stringify({ orgId, productLineId, triggerEventId, targetIsoWeek, targetYear }));
 
   const productLines = await prisma.productLine.findMany({
@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
       };
     }),
     gitEvent,
-    integrationContext
+    integrationContext,
+    { forceRun }
   );
 
   const created: string[] = [];

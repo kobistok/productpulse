@@ -72,15 +72,17 @@ export interface AgentOutput {
 export async function runProductPulseAgent(
   productLines: AgentProductLine[],
   gitEvent: GitEvent,
-  integrationContext?: Record<string, IntegrationContext>
+  integrationContext?: Record<string, IntegrationContext>,
+  options?: { forceRun?: boolean }
 ): Promise<AgentOutput[]> {
   const outputs: AgentOutput[] = [];
+  const forceRun = options?.forceRun ?? false;
 
   for (const productLine of productLines) {
     const result = await generateText({
       model: anthropic("claude-sonnet-4-6"),
       system: SYSTEM_PROMPT,
-      prompt: buildPrompt(productLine, gitEvent, integrationContext?.[productLine.id]),
+      prompt: buildPrompt(productLine, gitEvent, integrationContext?.[productLine.id], forceRun),
       tools: {
         create_update: tool({
           description:
@@ -101,22 +103,24 @@ export async function runProductPulseAgent(
             return { success: true };
           },
         }),
-        skip_update: tool({
-          description:
-            "Skip creating an update if this git push is not relevant to this product line.",
-          parameters: z.object({
-            reason: z
-              .string()
-              .describe("Brief reason why this push is not relevant."),
+        ...(!forceRun && {
+          skip_update: tool({
+            description:
+              "Skip creating an update if this git push is not relevant to this product line.",
+            parameters: z.object({
+              reason: z
+                .string()
+                .describe("Brief reason why this push is not relevant."),
+            }),
+            execute: async ({ reason }) => {
+              outputs.push({
+                productLineId: productLine.id,
+                decision: "skipped",
+                skipReason: reason,
+              });
+              return { success: true };
+            },
           }),
-          execute: async ({ reason }) => {
-            outputs.push({
-              productLineId: productLine.id,
-              decision: "skipped",
-              skipReason: reason,
-            });
-            return { success: true };
-          },
         }),
       },
       maxSteps: 3,
@@ -274,7 +278,8 @@ Refine the draft using any relevant information from the documents above. Return
 function buildPrompt(
   productLine: AgentProductLine,
   gitEvent: GitEvent,
-  context?: IntegrationContext
+  context?: IntegrationContext,
+  forceRun?: boolean
 ): string {
   const currentWeekSection = productLine.currentWeekContent
     ? `This week's update so far (you are ADDING to it — do NOT rewrite or repeat what's already there):\n${productLine.currentWeekContent}\n\n`
@@ -328,13 +333,15 @@ ${gitEvent.commits.map((c) => `- ${c.sha.slice(0, 7)} ${c.message} (${c.author})
 Diff summary:
 ${gitEvent.diffSummary}
 
-${productLine.filterRule ? `Filter — only create an update if ALL of the following conditions are met:
+${forceRun ? `This is a manual re-run. You MUST call create_update — do not skip. Use all available context (commits, Jira tickets, CircleCI status, product context) to write a meaningful update. If commits are empty, base the update on the integration data and product context.
+
+` : productLine.filterRule ? `Filter — only create an update if ALL of the following conditions are met:
 ${productLine.filterRule}
 If this filter condition is NOT satisfied by this push or its Jira context, call skip_update.
 
-` : ""}Decide:
+` : ""}${forceRun ? `Call create_update with a clear, user-facing description based on the available context. Your content will be appended to this week's update — do not repeat or rewrite anything already written this week.` : `Decide:
 1. Is this push relevant to the "${productLine.name}" product line?
 2. Does it satisfy the filter above (if any)?
 3. If yes to both — call create_update with a clear, user-facing description of ONLY what was shipped in THIS push. Your content will be appended to this week's update — do not repeat or rewrite anything already written this week.
-4. If no — call skip_update with a brief reason.`;
+4. If no — call skip_update with a brief reason.`}`;
 }
