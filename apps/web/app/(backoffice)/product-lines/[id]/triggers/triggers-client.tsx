@@ -324,7 +324,7 @@ type RerunState = {
   targetYear: number;
   status: "polling" | "ready" | "approving" | "approved";
   result: TriggerEventWithTrigger | null;
-  agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraKeys: string[] };
+  agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> };
 };
 
 function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null }) {
@@ -387,7 +387,7 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
       newEventId: string;
       targetIsoWeek: number;
       targetYear: number;
-      agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraKeys: string[] };
+      agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> };
     };
     // Optimistically reset the event row to show "Running…" in the log
     setEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, agentDecision: null, workerDetail: null, updateContent: null } : e));
@@ -478,26 +478,27 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
                 ))}
               </ul>
             )}
-            {rerun.agentInput.jiraKeys.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {rerun.agentInput.jiraKeys.map((key) => (
-                  jiraBaseUrl ? (
-                    <a
-                      key={key}
-                      href={`${jiraBaseUrl}/browse/${key}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
-                    >
-                      {key}
-                    </a>
-                  ) : (
-                    <span key={key} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                      {key}
-                    </span>
-                  )
+            {rerun.agentInput.jiraTickets.length > 0 && (
+              <ul className="mt-1.5 space-y-1">
+                {rerun.agentInput.jiraTickets.map((t) => (
+                  <li key={t.key} className="flex items-start gap-2 text-xs">
+                    {jiraBaseUrl ? (
+                      <a
+                        href={`${jiraBaseUrl}/browse/${t.key}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 font-mono text-blue-600 hover:underline"
+                      >
+                        {t.key}
+                      </a>
+                    ) : (
+                      <span className="shrink-0 font-mono text-blue-600">{t.key}</span>
+                    )}
+                    <span className="text-zinc-600">{t.summary}</span>
+                    <span className="shrink-0 ml-auto text-zinc-400">{t.status}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
 

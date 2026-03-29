@@ -81,7 +81,7 @@ export async function POST(
       repo,
       branch,
       commits: storedInput?.commits ?? [],
-      jiraKeys: storedInput?.jira?.map((t) => t.key) ?? [],
+      jiraTickets: storedInput?.jira ?? [],
     },
   });
 }
