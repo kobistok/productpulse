@@ -308,7 +308,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
       )}
 
       {/* Run log */}
-      <RunLog events={events} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} />
+      <RunLog events={events} setEvents={setEvents} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} />
     </div>
   );
 }
@@ -327,7 +327,7 @@ type RerunState = {
   agentInput: { repo: string; branch: string; jiraKeys: string[] };
 };
 
-function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; productLineId: string; jiraBaseUrl: string | null }) {
+function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<TriggerEventWithTrigger[] | null>(null);
@@ -352,6 +352,7 @@ function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWi
       if (ev.agentDecision) {
         clearInterval(pollRef.current!);
         pollRef.current = null;
+        setEvents((prev) => prev.map((e) => e.id === ev.id ? ev : e));
         setRerun((r) => r ? { ...r, status: "ready", result: ev } : null);
       }
     }, 2000);
@@ -388,6 +389,8 @@ function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWi
       targetYear: number;
       agentInput: { repo: string; branch: string; jiraKeys: string[] };
     };
+    // Optimistically reset the event row to show "Running…" in the log
+    setEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, agentDecision: null, workerDetail: null, updateContent: null } : e));
     setRerun({ originalEventId: eventId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null, agentInput });
   }
 

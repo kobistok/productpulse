@@ -49,21 +49,15 @@ export async function POST(
     ? [...originalEvent.workerDetail.matchAll(JIRA_KEY_RE)].map((m) => m[1])
     : [];
 
-  const newEvent = await prisma.triggerEvent.create({
-    data: {
-      productLineId,
-      triggerId: originalEvent.triggerId,
-      source: "manual",
-      status: "queued",
-      detail: `Re-run · Week ${targetIsoWeek}/${targetYear}`,
-      repo,
-      branch,
-    },
+  // Reset the original event in place — keeps same time, source, and row in the log
+  await prisma.triggerEvent.update({
+    where: { id: eventId },
+    data: { status: "queued", agentDecision: null, workerDetail: null, updateContent: null },
   });
 
   try {
     await enqueueAgentJob({
-      triggerEventId: newEvent.id,
+      triggerEventId: eventId,
       triggerId: originalEvent.triggerId ?? undefined,
       productLineId,
       orgId,
@@ -79,14 +73,14 @@ export async function POST(
     });
   } catch (err) {
     await prisma.triggerEvent.update({
-      where: { id: newEvent.id },
-      data: { status: "failed", detail: (err as Error).message },
+      where: { id: eventId },
+      data: { status: "failed", agentDecision: null },
     });
     return NextResponse.json({ error: "Failed to queue job" }, { status: 500 });
   }
 
   return NextResponse.json({
-    newEventId: newEvent.id,
+    newEventId: eventId,
     targetIsoWeek,
     targetYear,
     agentInput: { repo, branch, jiraKeys },
