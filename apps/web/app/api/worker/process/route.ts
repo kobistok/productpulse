@@ -83,16 +83,18 @@ export async function POST(request: NextRequest) {
     })
   );
 
-  // Persist input context on the TriggerEvent so re-runs can replay it
-  if (triggerEventId && !agentInputOverride) {
+  // Persist input context on the TriggerEvent (always, including re-runs with fresh Jira)
+  if (triggerEventId) {
     const ctx = integrationContext[productLineId];
-    const inputData: StoredAgentInput = {
-      commits: gitEvent.commits,
-      filesChanged: gitEvent.filesChanged,
-      diffSummary: gitEvent.diffSummary,
-      ...(ctx?.jira && { jira: ctx.jira, jiraBaseUrl: ctx.jiraBaseUrl }),
-      ...(ctx?.circleCI && { circleCI: ctx.circleCI }),
-    };
+    const inputData: StoredAgentInput = agentInputOverride
+      ? { ...agentInputOverride, ...(ctx?.jira && { jira: ctx.jira }) }
+      : {
+          commits: gitEvent.commits,
+          filesChanged: gitEvent.filesChanged,
+          diffSummary: gitEvent.diffSummary,
+          ...(ctx?.jira && { jira: ctx.jira, jiraBaseUrl: ctx.jiraBaseUrl }),
+          ...(ctx?.circleCI && { circleCI: ctx.circleCI }),
+        };
     prisma.triggerEvent.update({ where: { id: triggerEventId }, data: { agentInputData: inputData as object } })
       .catch((err) => console.error("[worker] Failed to save agentInputData:", err));
   }

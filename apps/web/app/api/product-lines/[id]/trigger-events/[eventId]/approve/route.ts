@@ -12,7 +12,7 @@ export async function POST(
   const orgId = user.memberships[0]?.orgId;
   if (!orgId) return NextResponse.json({ error: "No organization" }, { status: 400 });
 
-  const { isoWeek, year } = (await req.json()) as { isoWeek: number; year: number };
+  const { isoWeek, year, originalEventId } = (await req.json()) as { isoWeek: number; year: number; originalEventId?: string };
 
   const [productLine, event] = await Promise.all([
     prisma.productLine.findFirst({ where: { id: productLineId, orgId }, select: { id: true } }),
@@ -36,17 +36,21 @@ export async function POST(
         data: { productLineId, isoWeek, year, content: event.updateContent, commitShas: [] },
       });
 
-  // Now that the user approved, update workerDetail from stored input context
-  const inputData = event.agentInputData as StoredAgentInput | null;
-  if (inputData) {
-    const parts: string[] = [];
-    if (inputData.jira && inputData.jira.length > 0) {
-      parts.push(`Jira: ${inputData.jira.map((t) => `${t.key} (${t.status})`).join(", ")}`);
+  // On approval, update the original event to reflect the accepted result
+  if (originalEventId) {
+    const inputData = event.agentInputData as StoredAgentInput | null;
+    const workerDetailParts: string[] = [];
+    if (inputData?.jira && inputData.jira.length > 0) {
+      workerDetailParts.push(`Jira: ${inputData.jira.map((t) => `${t.key} (${t.status})`).join(", ")}`);
     }
-    if (parts.length > 0) {
-      prisma.triggerEvent.update({ where: { id: eventId }, data: { workerDetail: parts.join(" · ") } })
-        .catch(() => {});
-    }
+    prisma.triggerEvent.update({
+      where: { id: originalEventId },
+      data: {
+        agentDecision: "update_created",
+        updateContent: event.updateContent,
+        workerDetail: workerDetailParts.join(" · ") || null,
+      },
+    }).catch(() => {});
   }
 
   return NextResponse.json(update);

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { enqueueAgentJob, type StoredAgentInput } from "@/lib/cloud-tasks";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 
+const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; eventId: string }> }
@@ -14,7 +16,14 @@ export async function POST(
   if (!orgId) return NextResponse.json({ error: "No organization" }, { status: 400 });
 
   const [productLine, originalEvent] = await Promise.all([
-    prisma.productLine.findFirst({ where: { id: productLineId, orgId }, select: { id: true, orgId: true } }),
+    prisma.productLine.findFirst({
+      where: { id: productLineId, orgId },
+      select: {
+        id: true,
+        orgId: true,
+        jiraConfig: { select: { baseUrl: true, email: true, apiToken: true, atlassianDomain: true } },
+      },
+    }),
     prisma.triggerEvent.findUnique({
       where: { id: eventId },
       include: { trigger: { select: { id: true, repoUrl: true, branchFilter: true } } },
@@ -25,11 +34,9 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Derive target week from the original event's date
   const targetIsoWeek = getISOWeek(originalEvent.createdAt);
   const targetYear = getISOWeekYear(originalEvent.createdAt);
 
-  // Preserve repo/branch context from original event
   const repo =
     originalEvent.repo ??
     originalEvent.trigger?.repoUrl?.replace(/^https?:\/\/(github|gitlab)\.com\//, "") ??
@@ -43,15 +50,44 @@ export async function POST(
 
   const storedInput = originalEvent.agentInputData as StoredAgentInput | null;
 
-  // Reset the original event in place — keeps same time, source, and row in the log
-  await prisma.triggerEvent.update({
-    where: { id: eventId },
-    data: { status: "queued", agentDecision: null, workerDetail: null, updateContent: null },
+  // Get Jira tickets: use stored data, or re-fetch using keys from workerDetail
+  let jiraTickets = storedInput?.jira ?? [];
+  if (jiraTickets.length === 0 && originalEvent.workerDetail && productLine.jiraConfig) {
+    const keys = [...originalEvent.workerDetail.matchAll(JIRA_KEY_RE)].map((m) => m[1]);
+    if (keys.length > 0) {
+      const fresh = await fetchJiraTicketsByKeys(productLine.jiraConfig, keys);
+      if (fresh) jiraTickets = fresh;
+    }
+  }
+
+  const jiraBaseUrl = productLine.jiraConfig
+    ? productLine.jiraConfig.atlassianDomain
+      ? `https://${productLine.jiraConfig.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : productLine.jiraConfig.baseUrl.replace(/\/+$/, "")
+    : (storedInput?.jiraBaseUrl ?? undefined);
+
+  const agentInputOverride: StoredAgentInput | undefined = storedInput
+    ? { ...storedInput, jira: jiraTickets.length > 0 ? jiraTickets : storedInput.jira, jiraBaseUrl }
+    : jiraTickets.length > 0
+    ? { commits: [], filesChanged: [], diffSummary: "", jira: jiraTickets, jiraBaseUrl }
+    : undefined;
+
+  // Create a hidden temp event to hold the re-run result — not shown in the run log
+  const tempEvent = await prisma.triggerEvent.create({
+    data: {
+      productLineId,
+      triggerId: originalEvent.triggerId,
+      source: "manual",
+      status: "rerun_pending",
+      detail: `Re-run · Week ${targetIsoWeek}/${targetYear}`,
+      repo,
+      branch,
+    },
   });
 
   try {
     await enqueueAgentJob({
-      triggerEventId: eventId,
+      triggerEventId: tempEvent.id,
       triggerId: originalEvent.triggerId ?? undefined,
       productLineId,
       orgId,
@@ -63,25 +99,54 @@ export async function POST(
       targetIsoWeek,
       targetYear,
       manualRun: true,
-      agentInputOverride: storedInput ?? undefined,
+      agentInputOverride,
     });
   } catch (err) {
     await prisma.triggerEvent.update({
-      where: { id: eventId },
-      data: { status: "failed", agentDecision: null },
+      where: { id: tempEvent.id },
+      data: { status: "failed" },
     });
     return NextResponse.json({ error: "Failed to queue job" }, { status: 500 });
   }
 
   return NextResponse.json({
-    newEventId: eventId,
+    newEventId: tempEvent.id,
+    originalEventId: eventId,
     targetIsoWeek,
     targetYear,
     agentInput: {
       repo,
       branch,
       commits: storedInput?.commits ?? [],
-      jiraTickets: storedInput?.jira ?? [],
+      jiraTickets,
     },
   });
+}
+
+async function fetchJiraTicketsByKeys(
+  config: { baseUrl: string; email: string; apiToken: string },
+  keys: string[]
+): Promise<Array<{ key: string; summary: string; status: string; type: string }> | null> {
+  try {
+    const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
+    const results = await Promise.allSettled(
+      keys.map(async (key) => {
+        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}?fields=summary,status,issuetype`, {
+          headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+        });
+        if (!res.ok) return null;
+        type JiraIssue = { fields: { summary: string; status: { name: string }; issuetype: { name: string } } };
+        const issue = (await res.json()) as JiraIssue;
+        return { key, summary: issue.fields.summary, status: issue.fields.status.name, type: issue.fields.issuetype.name };
+      })
+    );
+    const tickets = results
+      .filter((r): r is PromiseFulfilledResult<{ key: string; summary: string; status: string; type: string }> =>
+        r.status === "fulfilled" && r.value !== null
+      )
+      .map((r) => r.value);
+    return tickets.length > 0 ? tickets : null;
+  } catch {
+    return null;
+  }
 }

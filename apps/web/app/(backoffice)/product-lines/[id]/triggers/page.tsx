@@ -28,7 +28,7 @@ export default async function TriggersPage({ params }: Props) {
       agent: { select: { id: true } },
       jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       triggerEvents: {
-        where: { status: { not: "skipped" } },
+        where: { status: { notIn: ["skipped", "rerun_pending"] } },
         orderBy: { createdAt: "desc" },
         take: 100,
         include: { trigger: { select: { repoUrl: true, provider: true } } },

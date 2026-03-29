@@ -352,7 +352,6 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
       if (ev.agentDecision) {
         clearInterval(pollRef.current!);
         pollRef.current = null;
-        setEvents((prev) => prev.map((e) => e.id === ev.id ? ev : e));
         setRerun((r) => r ? { ...r, status: "ready", result: ev } : null);
       }
     }, 2000);
@@ -383,15 +382,14 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
     const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${eventId}/rerun`, { method: "POST" });
     setRerunning(null);
     if (!res.ok) return;
-    const { newEventId, targetIsoWeek, targetYear, agentInput } = await res.json() as {
+    const { newEventId, originalEventId: returnedOriginalId, targetIsoWeek, targetYear, agentInput } = await res.json() as {
       newEventId: string;
+      originalEventId: string;
       targetIsoWeek: number;
       targetYear: number;
       agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> };
     };
-    // Optimistically reset the event row to show "Running…" in the log
-    setEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, agentDecision: null, workerDetail: null, updateContent: null } : e));
-    setRerun({ originalEventId: eventId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null, agentInput });
+    setRerun({ originalEventId: returnedOriginalId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null, agentInput });
   }
 
   async function handleApprove() {
@@ -402,10 +400,16 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isoWeek: rerun.targetIsoWeek, year: rerun.targetYear }),
+        body: JSON.stringify({ isoWeek: rerun.targetIsoWeek, year: rerun.targetYear, originalEventId: rerun.originalEventId }),
       }
     );
     if (res.ok) {
+      // Update the original event row to reflect the approved result
+      setEvents((prev) => prev.map((e) =>
+        e.id === rerun.originalEventId
+          ? { ...e, agentDecision: "update_created", updateContent: rerun.result?.updateContent ?? null }
+          : e
+      ));
       setRerun((r) => r ? { ...r, status: "approved" } : null);
       setTimeout(() => setRerun(null), 3000);
     }
