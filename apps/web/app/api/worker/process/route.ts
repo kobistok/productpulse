@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
         ctx.circleCI = await fetchCircleCIContext(pl.circleCIConfig, gitEvent.commits.map((c) => c.sha));
       }
       if (pl.jiraConfig) {
-        const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message));
+        const preloadedJiraKeys = (payload as { preloadedJiraKeys?: string[] }).preloadedJiraKeys ?? [];
+        const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message), preloadedJiraKeys);
         if (tickets.length > 0) {
           ctx.jira = tickets;
           // Prefer explicit atlassianDomain for browse links; fall back to normalized baseUrl
@@ -252,10 +253,14 @@ const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
 
 async function fetchJiraTickets(
   config: { baseUrl: string; email: string; apiToken: string },
-  commitMessages: string[]
+  commitMessages: string[],
+  preloadedKeys: string[] = []
 ): Promise<NonNullable<IntegrationContext["jira"]>> {
   const keys = [
-    ...new Set(commitMessages.flatMap((m) => [...m.matchAll(JIRA_KEY_RE)].map((r) => r[1]))),
+    ...new Set([
+      ...commitMessages.flatMap((m) => [...m.matchAll(JIRA_KEY_RE)].map((r) => r[1])),
+      ...preloadedKeys,
+    ]),
   ];
   if (keys.length === 0) return [];
 

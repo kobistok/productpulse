@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { enqueueAgentJob } from "@/lib/cloud-tasks";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 
+const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; eventId: string }> }
@@ -41,6 +43,12 @@ export async function POST(
       : originalEvent.trigger?.branchFilter) ??
     "main";
 
+  // Extract Jira keys from the original event's workerDetail so the re-run
+  // agent has the same Jira context even though commits are empty.
+  const jiraKeys: string[] = originalEvent.workerDetail
+    ? [...originalEvent.workerDetail.matchAll(JIRA_KEY_RE)].map((m) => m[1])
+    : [];
+
   const newEvent = await prisma.triggerEvent.create({
     data: {
       productLineId,
@@ -63,6 +71,7 @@ export async function POST(
         ref: `refs/heads/${branch}`,
         repository: { full_name: repo },
         commits: [],
+        preloadedJiraKeys: jiraKeys,
       },
       targetIsoWeek,
       targetYear,
@@ -76,5 +85,10 @@ export async function POST(
     return NextResponse.json({ error: "Failed to queue job" }, { status: 500 });
   }
 
-  return NextResponse.json({ newEventId: newEvent.id, targetIsoWeek, targetYear });
+  return NextResponse.json({
+    newEventId: newEvent.id,
+    targetIsoWeek,
+    targetYear,
+    agentInput: { repo, branch, jiraKeys },
+  });
 }

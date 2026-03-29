@@ -324,6 +324,7 @@ type RerunState = {
   targetYear: number;
   status: "polling" | "ready" | "approving" | "approved";
   result: TriggerEventWithTrigger | null;
+  agentInput: { repo: string; branch: string; jiraKeys: string[] };
 };
 
 function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; productLineId: string; jiraBaseUrl: string | null }) {
@@ -381,8 +382,13 @@ function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWi
     const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${eventId}/rerun`, { method: "POST" });
     setRerunning(null);
     if (!res.ok) return;
-    const { newEventId, targetIsoWeek, targetYear } = await res.json() as { newEventId: string; targetIsoWeek: number; targetYear: number };
-    setRerun({ originalEventId: eventId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null });
+    const { newEventId, targetIsoWeek, targetYear, agentInput } = await res.json() as {
+      newEventId: string;
+      targetIsoWeek: number;
+      targetYear: number;
+      agentInput: { repo: string; branch: string; jiraKeys: string[] };
+    };
+    setRerun({ originalEventId: eventId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null, agentInput });
   }
 
   async function handleApprove() {
@@ -437,21 +443,62 @@ function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWi
 
   return (
     <>
-    {/* Re-run result modal */}
-    {rerun && rerun.status !== "polling" && (
+    {/* Re-run modal — shown during polling and after */}
+    {rerun && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
             <div>
-              <p className="text-sm font-semibold text-zinc-900">Re-run result</p>
+              <p className="text-sm font-semibold text-zinc-900">
+                {rerun.status === "polling" ? "Running agent…" : "Re-run result"}
+              </p>
               <p className="text-xs text-zinc-500 mt-0.5">Week {rerun.targetIsoWeek} · {rerun.targetYear}</p>
             </div>
             <button onClick={() => setRerun(null)} className="text-zinc-400 hover:text-zinc-700 transition-colors">
               <X size={16} />
             </button>
           </div>
+
+          {/* Agent input context — always visible */}
+          <div className="px-6 py-3 border-b border-zinc-100 bg-zinc-50 shrink-0">
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2">Agent input</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600">
+              <span><span className="text-zinc-400">Repo</span> {rerun.agentInput.repo}</span>
+              <span><span className="text-zinc-400">Branch</span> {rerun.agentInput.branch}</span>
+            </div>
+            {rerun.agentInput.jiraKeys.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {rerun.agentInput.jiraKeys.map((key) => (
+                  jiraBaseUrl ? (
+                    <a
+                      key={key}
+                      href={`${jiraBaseUrl}/browse/${key}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                    >
+                      {key}
+                    </a>
+                  ) : (
+                    <span key={key} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      {key}
+                    </span>
+                  )
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-zinc-400">No Jira tickets</p>
+            )}
+            <p className="mt-1.5 text-[11px] text-zinc-400">Commits not stored — agent uses Jira and CircleCI context only</p>
+          </div>
+
           <div className="px-6 py-5 overflow-y-auto flex-1">
-            {rerun.status === "approved" ? (
+            {rerun.status === "polling" ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-zinc-400">
+                <RefreshCw size={16} className="animate-spin" />
+                <span className="text-sm">Agent is running…</span>
+              </div>
+            ) : rerun.status === "approved" ? (
               <div className="text-center py-8">
                 <Check size={32} className="text-green-500 mx-auto mb-3" />
                 <p className="text-sm font-semibold text-zinc-900">Update saved!</p>
