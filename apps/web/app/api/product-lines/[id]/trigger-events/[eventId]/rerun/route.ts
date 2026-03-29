@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { enqueueAgentJob } from "@/lib/cloud-tasks";
+import { enqueueAgentJob, type StoredAgentInput } from "@/lib/cloud-tasks";
 import { getISOWeek, getISOWeekYear } from "date-fns";
-
-const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
 
 export async function POST(
   _req: NextRequest,
@@ -43,11 +41,7 @@ export async function POST(
       : originalEvent.trigger?.branchFilter) ??
     "main";
 
-  // Extract Jira keys from the original event's workerDetail so the re-run
-  // agent has the same Jira context even though commits are empty.
-  const jiraKeys: string[] = originalEvent.workerDetail
-    ? [...originalEvent.workerDetail.matchAll(JIRA_KEY_RE)].map((m) => m[1])
-    : [];
+  const storedInput = originalEvent.agentInputData as StoredAgentInput | null;
 
   // Reset the original event in place — keeps same time, source, and row in the log
   await prisma.triggerEvent.update({
@@ -65,11 +59,11 @@ export async function POST(
         ref: `refs/heads/${branch}`,
         repository: { full_name: repo },
         commits: [],
-        preloadedJiraKeys: jiraKeys,
       },
       targetIsoWeek,
       targetYear,
       manualRun: true,
+      agentInputOverride: storedInput ?? undefined,
     });
   } catch (err) {
     await prisma.triggerEvent.update({
@@ -83,6 +77,11 @@ export async function POST(
     newEventId: eventId,
     targetIsoWeek,
     targetYear,
-    agentInput: { repo, branch, jiraKeys },
+    agentInput: {
+      repo,
+      branch,
+      commits: storedInput?.commits ?? [],
+      jiraKeys: storedInput?.jira?.map((t) => t.key) ?? [],
+    },
   });
 }

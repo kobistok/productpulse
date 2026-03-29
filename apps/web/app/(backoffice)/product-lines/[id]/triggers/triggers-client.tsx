@@ -324,7 +324,7 @@ type RerunState = {
   targetYear: number;
   status: "polling" | "ready" | "approving" | "approved";
   result: TriggerEventWithTrigger | null;
-  agentInput: { repo: string; branch: string; jiraKeys: string[] };
+  agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraKeys: string[] };
 };
 
 function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null }) {
@@ -387,7 +387,7 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
       newEventId: string;
       targetIsoWeek: number;
       targetYear: number;
-      agentInput: { repo: string; branch: string; jiraKeys: string[] };
+      agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraKeys: string[] };
     };
     // Optimistically reset the event row to show "Running…" in the log
     setEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, agentDecision: null, workerDetail: null, updateContent: null } : e));
@@ -469,7 +469,16 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
               <span><span className="text-zinc-400">Repo</span> {rerun.agentInput.repo}</span>
               <span><span className="text-zinc-400">Branch</span> {rerun.agentInput.branch}</span>
             </div>
-            {rerun.agentInput.jiraKeys.length > 0 ? (
+            {rerun.agentInput.commits.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5">
+                {rerun.agentInput.commits.map((c) => (
+                  <li key={c.sha} className="text-xs text-zinc-600">
+                    <span className="text-zinc-400 font-mono">{c.sha.slice(0, 7)}</span> {c.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {rerun.agentInput.jiraKeys.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {rerun.agentInput.jiraKeys.map((key) => (
                   jiraBaseUrl ? (
@@ -489,8 +498,6 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
                   )
                 ))}
               </div>
-            ) : (
-              <p className="mt-1 text-xs text-zinc-400">No Jira tickets</p>
             )}
           </div>
 

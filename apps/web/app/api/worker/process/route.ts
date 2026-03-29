@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { pendoTrackServer } from "@/lib/pendo";
 import { runProductPulseAgent, type IntegrationContext } from "@productpulse/agent";
 import { getISOWeek, getISOWeekYear } from "date-fns";
+import type { StoredAgentInput } from "@/lib/cloud-tasks";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("Authorization");
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   const job = await request.json();
-  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun, manualRun } = job;
+  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun, manualRun, agentInputOverride } = job as { orgId: string; productLineId: string; triggerEventId?: string; payload: unknown; targetIsoWeek?: number; targetYear?: number; forceRun?: boolean; manualRun?: boolean; agentInputOverride?: StoredAgentInput };
   console.log("[worker] job:", JSON.stringify({ orgId, productLineId, triggerEventId, targetIsoWeek, targetYear }));
 
   const productLines = await prisma.productLine.findMany({
@@ -30,15 +31,15 @@ export async function POST(request: NextRequest) {
   }
 
   const gitEvent = {
-    repo: (payload.repository as { full_name: string })?.full_name ?? "unknown",
-    branch: (payload.ref as string)?.replace("refs/heads/", "") ?? "unknown",
-    commits: ((payload.commits as Array<{ id: string; message: string; author: { name: string } }>) ?? []).map((c) => ({
+    repo: (payload as { repository?: { full_name?: string } }).repository?.full_name ?? "unknown",
+    branch: ((payload as { ref?: string }).ref ?? "").replace("refs/heads/", "") || "unknown",
+    commits: agentInputOverride?.commits ?? ((payload as { commits?: Array<{ id: string; message: string; author: { name: string } }> }).commits ?? []).map((c) => ({
       sha: c.id,
       message: c.message,
       author: c.author?.name ?? "unknown",
     })),
-    diffSummary: buildDiffSummary(payload),
-    filesChanged: extractFilesChanged(payload),
+    diffSummary: agentInputOverride?.diffSummary ?? buildDiffSummary(payload),
+    filesChanged: agentInputOverride?.filesChanged ?? extractFilesChanged(payload),
   };
 
   // Build per-product-line integration context
@@ -46,26 +47,51 @@ export async function POST(request: NextRequest) {
   await Promise.all(
     productLines.map(async (pl) => {
       const ctx: IntegrationContext = {};
-      if (pl.circleCIConfig) {
-        ctx.circleCI = await fetchCircleCIContext(pl.circleCIConfig, gitEvent.commits.map((c) => c.sha));
-      }
-      if (pl.jiraConfig) {
-        const preloadedJiraKeys = (payload as { preloadedJiraKeys?: string[] }).preloadedJiraKeys ?? [];
-        const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message), preloadedJiraKeys);
-        if (tickets.length > 0) {
-          ctx.jira = tickets;
-          // Prefer explicit atlassianDomain for browse links; fall back to normalized baseUrl
-          const domain = pl.jiraConfig.atlassianDomain?.replace(/^https?:\/\//, "").replace(/\/+$/, "");
-          ctx.jiraBaseUrl = domain
-            ? `https://${domain}`
-            : pl.jiraConfig.baseUrl.replace(/\/+$/, "");
+
+      if (agentInputOverride && pl.id === productLineId) {
+        // Re-run: use stored context directly, no re-fetching
+        if (agentInputOverride.jira) {
+          ctx.jira = agentInputOverride.jira;
+          ctx.jiraBaseUrl = agentInputOverride.jiraBaseUrl;
+        }
+        if (agentInputOverride.circleCI) {
+          ctx.circleCI = agentInputOverride.circleCI;
+        }
+      } else {
+        if (pl.circleCIConfig) {
+          ctx.circleCI = await fetchCircleCIContext(pl.circleCIConfig, gitEvent.commits.map((c) => c.sha));
+        }
+        if (pl.jiraConfig) {
+          const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message));
+          if (tickets.length > 0) {
+            ctx.jira = tickets;
+            const domain = pl.jiraConfig.atlassianDomain?.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+            ctx.jiraBaseUrl = domain
+              ? `https://${domain}`
+              : pl.jiraConfig.baseUrl.replace(/\/+$/, "");
+          }
         }
       }
+
       if (ctx.circleCI || ctx.jira) {
         integrationContext[pl.id] = ctx;
       }
     })
   );
+
+  // Persist input context on the TriggerEvent so re-runs can replay it
+  if (triggerEventId && !agentInputOverride) {
+    const ctx = integrationContext[productLineId];
+    const inputData: StoredAgentInput = {
+      commits: gitEvent.commits,
+      filesChanged: gitEvent.filesChanged,
+      diffSummary: gitEvent.diffSummary,
+      ...(ctx?.jira && { jira: ctx.jira, jiraBaseUrl: ctx.jiraBaseUrl }),
+      ...(ctx?.circleCI && { circleCI: ctx.circleCI }),
+    };
+    prisma.triggerEvent.update({ where: { id: triggerEventId }, data: { agentInputData: inputData as object } })
+      .catch((err) => console.error("[worker] Failed to save agentInputData:", err));
+  }
 
   const now = new Date();
   const isoWeek = targetIsoWeek ?? getISOWeek(now);
@@ -253,14 +279,10 @@ const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
 
 async function fetchJiraTickets(
   config: { baseUrl: string; email: string; apiToken: string },
-  commitMessages: string[],
-  preloadedKeys: string[] = []
+  commitMessages: string[]
 ): Promise<NonNullable<IntegrationContext["jira"]>> {
   const keys = [
-    ...new Set([
-      ...commitMessages.flatMap((m) => [...m.matchAll(JIRA_KEY_RE)].map((r) => r[1])),
-      ...preloadedKeys,
-    ]),
+    ...new Set(commitMessages.flatMap((m) => [...m.matchAll(JIRA_KEY_RE)].map((r) => r[1]))),
   ];
   if (keys.length === 0) return [];
 

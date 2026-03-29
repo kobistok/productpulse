@@ -1,3 +1,16 @@
+export interface StoredAgentInput {
+  commits: Array<{ sha: string; message: string; author: string }>;
+  filesChanged: string[];
+  diffSummary: string;
+  jira?: Array<{ key: string; summary: string; status: string; type: string }>;
+  jiraBaseUrl?: string;
+  circleCI?: {
+    lastSuccessfulPipelineAt: string | null;
+    lastSuccessfulCommitSha: string | null;
+    unreleasedCommitCount: number | null;
+  };
+}
+
 export interface AgentJob {
   triggerId?: string;
   triggerEventId?: string;
@@ -8,6 +21,7 @@ export interface AgentJob {
   targetYear?: number;
   forceRun?: boolean;
   manualRun?: boolean;
+  agentInputOverride?: StoredAgentInput;
 }
 
 export async function enqueueAgentJob(job: AgentJob): Promise<void> {
