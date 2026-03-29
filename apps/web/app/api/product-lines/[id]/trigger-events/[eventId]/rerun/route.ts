@@ -123,25 +123,72 @@ export async function POST(
   });
 }
 
+type JiraIssueResponse = {
+  fields: {
+    summary: string;
+    status: { name: string };
+    issuetype: { name: string };
+    description?: { content?: unknown[] } | string | null;
+    assignee?: { displayName?: string } | null;
+    reporter?: { displayName?: string } | null;
+    priority?: { name?: string } | null;
+    labels?: string[];
+    components?: Array<{ name?: string }>;
+    fixVersions?: Array<{ name?: string }>;
+    created?: string;
+    updated?: string;
+    resolution?: { name?: string } | null;
+  };
+};
+
+function parseJiraIssue(key: string, issue: JiraIssueResponse) {
+  const f = issue.fields;
+  let description: string | null = null;
+  if (typeof f.description === "string") {
+    description = f.description;
+  } else if (f.description && typeof f.description === "object" && Array.isArray(f.description.content)) {
+    description = f.description.content
+      .flatMap((block: unknown) => {
+        const b = block as { content?: Array<{ text?: string }> };
+        return (b.content ?? []).map((c) => c.text ?? "").filter(Boolean);
+      })
+      .join(" ") || null;
+  }
+  return {
+    key,
+    summary: f.summary,
+    status: f.status.name,
+    type: f.issuetype.name,
+    description,
+    assignee: f.assignee?.displayName ?? null,
+    reporter: f.reporter?.displayName ?? null,
+    priority: f.priority?.name ?? null,
+    labels: f.labels ?? [],
+    components: (f.components ?? []).map((c) => c.name ?? "").filter(Boolean),
+    fixVersions: (f.fixVersions ?? []).map((v) => v.name ?? "").filter(Boolean),
+    created: f.created ?? null,
+    updated: f.updated ?? null,
+    resolution: f.resolution?.name ?? null,
+  };
+}
+
 async function fetchJiraTicketsByKeys(
   config: { baseUrl: string; email: string; apiToken: string },
   keys: string[]
-): Promise<Array<{ key: string; summary: string; status: string; type: string }> | null> {
+): Promise<ReturnType<typeof parseJiraIssue>[] | null> {
   try {
     const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
     const results = await Promise.allSettled(
       keys.map(async (key) => {
-        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}?fields=summary,status,issuetype`, {
+        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}`, {
           headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
         });
         if (!res.ok) return null;
-        type JiraIssue = { fields: { summary: string; status: { name: string }; issuetype: { name: string } } };
-        const issue = (await res.json()) as JiraIssue;
-        return { key, summary: issue.fields.summary, status: issue.fields.status.name, type: issue.fields.issuetype.name };
+        return parseJiraIssue(key, (await res.json()) as JiraIssueResponse);
       })
     );
     const tickets = results
-      .filter((r): r is PromiseFulfilledResult<{ key: string; summary: string; status: string; type: string }> =>
+      .filter((r): r is PromiseFulfilledResult<ReturnType<typeof parseJiraIssue>> =>
         r.status === "fulfilled" && r.value !== null
       )
       .map((r) => r.value);

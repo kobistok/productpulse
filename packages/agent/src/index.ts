@@ -54,6 +54,16 @@ export interface JiraTicket {
   summary: string;
   status: string;
   type: string;
+  description?: string | null;
+  assignee?: string | null;
+  reporter?: string | null;
+  priority?: string | null;
+  labels?: string[];
+  components?: string[];
+  fixVersions?: string[];
+  created?: string | null;
+  updated?: string | null;
+  resolution?: string | null;
 }
 
 export interface IntegrationContext {
@@ -304,7 +314,18 @@ Commits not yet in production: ${context.circleCI.unreleasedCommitCount ?? "unkn
     context?.jira && context.jira.length > 0
       ? `
 [Jira — Related Tickets]
-${context.jira.map((t) => `- ${t.key} [${t.type}] "${t.summary}" (${t.status})`).join("\n")}
+${context.jira.map((t) => {
+  const lines = [`- ${t.key} [${t.type}] "${t.summary}" (${t.status})`];
+  if (t.assignee) lines.push(`  Assignee: ${t.assignee}`);
+  if (t.reporter) lines.push(`  Reporter: ${t.reporter}`);
+  if (t.priority) lines.push(`  Priority: ${t.priority}`);
+  if (t.labels && t.labels.length > 0) lines.push(`  Labels: ${t.labels.join(", ")}`);
+  if (t.components && t.components.length > 0) lines.push(`  Components: ${t.components.join(", ")}`);
+  if (t.fixVersions && t.fixVersions.length > 0) lines.push(`  Fix versions: ${t.fixVersions.join(", ")}`);
+  if (t.description) lines.push(`  Description: ${t.description}`);
+  if (t.resolution) lines.push(`  Resolution: ${t.resolution}`);
+  return lines.join("\n");
+}).join("\n")}
 `
       : "";
 

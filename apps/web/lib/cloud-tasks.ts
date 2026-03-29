@@ -2,7 +2,13 @@ export interface StoredAgentInput {
   commits: Array<{ sha: string; message: string; author: string }>;
   filesChanged: string[];
   diffSummary: string;
-  jira?: Array<{ key: string; summary: string; status: string; type: string }>;
+  jira?: Array<{
+    key: string; summary: string; status: string; type: string;
+    description?: string | null; assignee?: string | null; reporter?: string | null;
+    priority?: string | null; labels?: string[]; components?: string[];
+    fixVersions?: string[]; created?: string | null; updated?: string | null;
+    resolution?: string | null;
+  }>;
   jiraBaseUrl?: string;
   circleCI?: {
     lastSuccessfulPipelineAt: string | null;
