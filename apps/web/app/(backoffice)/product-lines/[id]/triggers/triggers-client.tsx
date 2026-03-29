@@ -523,10 +523,10 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
                 {rerun.result.updateContent}
               </pre>
             ) : (
-              <div className="text-center py-8">
+              <div className="py-8 space-y-2">
                 <p className="text-sm text-zinc-500">Agent decided not to create an update.</p>
                 {rerun.result?.workerDetail && (
-                  <p className="text-xs text-zinc-400 mt-1">{rerun.result.workerDetail}</p>
+                  <p className="text-xs text-zinc-400">{rerun.result.workerDetail.replace(/^Agent:\s*/i, "")}</p>
                 )}
               </div>
             )}

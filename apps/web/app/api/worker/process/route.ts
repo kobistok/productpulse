@@ -152,16 +152,15 @@ export async function POST(request: NextRequest) {
     const output = outputs[0];
     const workerDetailParts: string[] = [];
     if (integrationParts.length > 0) workerDetailParts.push(integrationParts.join(" · "));
-    if (output?.decision === "skipped" && output.skipReason && !manualRun) workerDetailParts.push(`Agent: ${output.skipReason}`);
+    if (output?.decision === "skipped" && output.skipReason) workerDetailParts.push(`Agent: ${output.skipReason}`);
 
-    // Step 1: always write agentDecision (critical — drives the run log status)
-    // For manual re-runs, don't update workerDetail until the user approves
+    // Step 1: always write agentDecision and workerDetail
     try {
       await prisma.triggerEvent.update({
         where: { id: triggerEventId },
         data: {
           agentDecision: output?.decision ?? "skipped",
-          ...(!manualRun && { workerDetail: workerDetailParts.join(" · ") || null }),
+          workerDetail: workerDetailParts.join(" · ") || null,
         },
       });
     } catch (err) {
