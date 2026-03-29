@@ -49,9 +49,13 @@ export async function POST(request: NextRequest) {
       const ctx: IntegrationContext = {};
 
       if (agentInputOverride && pl.id === productLineId) {
-        // Re-run: use stored context directly, no re-fetching
-        if (agentInputOverride.jira) {
-          ctx.jira = agentInputOverride.jira;
+        // Re-run: re-fetch Jira tickets for current status, fall back to stored data
+        if (agentInputOverride.jira && agentInputOverride.jira.length > 0) {
+          const keys = agentInputOverride.jira.map((t) => t.key);
+          const fresh = pl.jiraConfig
+            ? await fetchJiraTicketsByKeys(pl.jiraConfig, keys)
+            : null;
+          ctx.jira = fresh && fresh.length > 0 ? fresh : agentInputOverride.jira;
           ctx.jiraBaseUrl = agentInputOverride.jiraBaseUrl;
         }
         if (agentInputOverride.circleCI) {
@@ -310,6 +314,35 @@ async function fetchJiraTickets(
       r.status === "fulfilled" && r.value !== null
     )
     .map((r) => r.value);
+}
+
+async function fetchJiraTicketsByKeys(
+  config: { baseUrl: string; email: string; apiToken: string },
+  keys: string[]
+): Promise<NonNullable<IntegrationContext["jira"]> | null> {
+  if (keys.length === 0) return null;
+  try {
+    const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
+    const results = await Promise.allSettled(
+      keys.map(async (key) => {
+        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}?fields=summary,status,issuetype`, {
+          headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+        });
+        if (!res.ok) return null;
+        type JiraIssue = { fields: { summary: string; status: { name: string }; issuetype: { name: string } } };
+        const issue = (await res.json()) as JiraIssue;
+        return { key, summary: issue.fields.summary, status: issue.fields.status.name, type: issue.fields.issuetype.name };
+      })
+    );
+    const tickets = results
+      .filter((r): r is PromiseFulfilledResult<NonNullable<IntegrationContext["jira"]>[0]> =>
+        r.status === "fulfilled" && r.value !== null
+      )
+      .map((r) => r.value);
+    return tickets.length > 0 ? tickets : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
