@@ -492,7 +492,6 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
             ) : (
               <p className="mt-1 text-xs text-zinc-400">No Jira tickets</p>
             )}
-            <p className="mt-1.5 text-[11px] text-zinc-400">Commits not stored — agent uses Jira and CircleCI context only</p>
           </div>
 
           <div className="px-6 py-5 overflow-y-auto flex-1">
