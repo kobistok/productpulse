@@ -170,7 +170,7 @@ export async function fetchJiraTickets(
     ...new Set(commitMessages.flatMap((m) => [...m.matchAll(JIRA_KEY_RE)].map((r) => r[1]))),
   ];
   if (keys.length === 0) return [];
-  return fetchJiraTicketsByKeys(config, keys, fieldMap) ?? [];
+  return (await fetchJiraTicketsByKeys(config, keys, fieldMap)) ?? [];
 }
 
 /** Fetch Jira tickets by explicit keys. Returns null on total failure. */
