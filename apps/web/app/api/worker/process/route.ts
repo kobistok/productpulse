@@ -4,6 +4,12 @@ import { pendoTrackServer } from "@/lib/pendo";
 import { runProductPulseAgent, type IntegrationContext } from "@productpulse/agent";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import type { StoredAgentInput } from "@/lib/cloud-tasks";
+import {
+  fetchJiraFieldMap,
+  fetchJiraTickets,
+  fetchJiraTicketsByKeys,
+  type JiraConfig,
+} from "@/lib/jira";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("Authorization");
@@ -44,16 +50,32 @@ export async function POST(request: NextRequest) {
 
   // Build per-product-line integration context
   const integrationContext: Record<string, IntegrationContext> = {};
+
+  // Pre-fetch field maps for all distinct Jira workspaces (one request per baseUrl)
+  const distinctJiraConfigs = productLines
+    .filter((pl) => pl.jiraConfig)
+    .reduce((acc, pl) => {
+      if (!acc.has(pl.jiraConfig!.baseUrl)) acc.set(pl.jiraConfig!.baseUrl, pl.jiraConfig! as JiraConfig);
+      return acc;
+    }, new Map<string, JiraConfig>());
+
+  const jiraFieldMaps = new Map<string, Map<string, string>>(
+    await Promise.all(
+      [...distinctJiraConfigs.entries()].map(async ([baseUrl, cfg]) => [baseUrl, await fetchJiraFieldMap(cfg)] as const)
+    )
+  );
+
   await Promise.all(
     productLines.map(async (pl) => {
       const ctx: IntegrationContext = {};
+      const fieldMap = pl.jiraConfig ? jiraFieldMaps.get(pl.jiraConfig.baseUrl) : undefined;
 
       if (agentInputOverride && pl.id === productLineId) {
-        // Re-run: re-fetch Jira tickets for current status, fall back to stored data
+        // Re-run: re-fetch Jira tickets for current status (with fresh custom fields), fall back to stored data
         if (agentInputOverride.jira && agentInputOverride.jira.length > 0) {
           const keys = agentInputOverride.jira.map((t) => t.key);
           const fresh = pl.jiraConfig
-            ? await fetchJiraTicketsByKeys(pl.jiraConfig, keys)
+            ? await fetchJiraTicketsByKeys(pl.jiraConfig as JiraConfig, keys, fieldMap)
             : null;
           ctx.jira = fresh && fresh.length > 0 ? fresh : agentInputOverride.jira;
           ctx.jiraBaseUrl = agentInputOverride.jiraBaseUrl;
@@ -66,7 +88,11 @@ export async function POST(request: NextRequest) {
           ctx.circleCI = await fetchCircleCIContext(pl.circleCIConfig, gitEvent.commits.map((c) => c.sha));
         }
         if (pl.jiraConfig) {
-          const tickets = await fetchJiraTickets(pl.jiraConfig, gitEvent.commits.map((c) => c.message));
+          const tickets = await fetchJiraTickets(
+            pl.jiraConfig as JiraConfig,
+            gitEvent.commits.map((c) => c.message),
+            fieldMap
+          );
           if (tickets.length > 0) {
             ctx.jira = tickets;
             const domain = pl.jiraConfig.atlassianDomain?.replace(/^https?:\/\//, "").replace(/\/+$/, "");
@@ -276,113 +302,6 @@ async function fetchCircleCIContext(
     };
   } catch {
     return undefined;
-  }
-}
-
-// ── Jira ─────────────────────────────────────────────────────────────────────
-
-const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
-
-type JiraIssueResponse = {
-  fields: {
-    summary: string;
-    status: { name: string };
-    issuetype: { name: string };
-    description?: { content?: unknown[] } | string | null;
-    assignee?: { displayName?: string } | null;
-    reporter?: { displayName?: string } | null;
-    priority?: { name?: string } | null;
-    labels?: string[];
-    components?: Array<{ name?: string }>;
-    fixVersions?: Array<{ name?: string }>;
-    created?: string;
-    updated?: string;
-    resolution?: { name?: string } | null;
-  };
-};
-
-function parseJiraIssue(key: string, issue: JiraIssueResponse): NonNullable<IntegrationContext["jira"]>[0] {
-  const f = issue.fields;
-  // Description can be Atlassian Document Format (object) or plain string
-  let description: string | null = null;
-  if (typeof f.description === "string") {
-    description = f.description;
-  } else if (f.description && typeof f.description === "object" && Array.isArray(f.description.content)) {
-    description = f.description.content
-      .flatMap((block: unknown) => {
-        const b = block as { content?: Array<{ text?: string }> };
-        return (b.content ?? []).map((c) => c.text ?? "").filter(Boolean);
-      })
-      .join(" ") || null;
-  }
-  return {
-    key,
-    summary: f.summary,
-    status: f.status.name,
-    type: f.issuetype.name,
-    description,
-    assignee: f.assignee?.displayName ?? null,
-    reporter: f.reporter?.displayName ?? null,
-    priority: f.priority?.name ?? null,
-    labels: f.labels ?? [],
-    components: (f.components ?? []).map((c) => c.name ?? "").filter(Boolean),
-    fixVersions: (f.fixVersions ?? []).map((v) => v.name ?? "").filter(Boolean),
-    created: f.created ?? null,
-    updated: f.updated ?? null,
-    resolution: f.resolution?.name ?? null,
-  };
-}
-
-async function fetchJiraTickets(
-  config: { baseUrl: string; email: string; apiToken: string },
-  commitMessages: string[]
-): Promise<NonNullable<IntegrationContext["jira"]>> {
-  const keys = [
-    ...new Set(commitMessages.flatMap((m) => [...m.matchAll(JIRA_KEY_RE)].map((r) => r[1]))),
-  ];
-  if (keys.length === 0) return [];
-
-  const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
-  const results = await Promise.allSettled(
-    keys.map(async (key) => {
-      const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}`, {
-        headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-      });
-      if (!res.ok) return null;
-      return parseJiraIssue(key, (await res.json()) as JiraIssueResponse);
-    })
-  );
-  return results
-    .filter((r): r is PromiseFulfilledResult<NonNullable<IntegrationContext["jira"]>[0]> =>
-      r.status === "fulfilled" && r.value !== null
-    )
-    .map((r) => r.value);
-}
-
-async function fetchJiraTicketsByKeys(
-  config: { baseUrl: string; email: string; apiToken: string },
-  keys: string[]
-): Promise<NonNullable<IntegrationContext["jira"]> | null> {
-  if (keys.length === 0) return null;
-  try {
-    const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
-    const results = await Promise.allSettled(
-      keys.map(async (key) => {
-        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}`, {
-          headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-        });
-        if (!res.ok) return null;
-        return parseJiraIssue(key, (await res.json()) as JiraIssueResponse);
-      })
-    );
-    const tickets = results
-      .filter((r): r is PromiseFulfilledResult<NonNullable<IntegrationContext["jira"]>[0]> =>
-        r.status === "fulfilled" && r.value !== null
-      )
-      .map((r) => r.value);
-    return tickets.length > 0 ? tickets : null;
-  } catch {
-    return null;
   }
 }
 

@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { enqueueAgentJob, type StoredAgentInput } from "@/lib/cloud-tasks";
 import { getISOWeek, getISOWeekYear } from "date-fns";
+import { fetchJiraFieldMap, fetchJiraTicketsByKeys, type JiraConfig } from "@/lib/jira";
 
 const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
 
@@ -55,9 +56,16 @@ export async function POST(
   if (jiraTickets.length === 0 && originalEvent.workerDetail && productLine.jiraConfig) {
     const keys = [...originalEvent.workerDetail.matchAll(JIRA_KEY_RE)].map((m) => m[1]);
     if (keys.length > 0) {
-      const fresh = await fetchJiraTicketsByKeys(productLine.jiraConfig, keys);
+      const fieldMap = await fetchJiraFieldMap(productLine.jiraConfig as JiraConfig);
+      const fresh = await fetchJiraTicketsByKeys(productLine.jiraConfig as JiraConfig, keys, fieldMap);
       if (fresh) jiraTickets = fresh;
     }
+  } else if (jiraTickets.length > 0 && productLine.jiraConfig) {
+    // Re-fetch stored tickets to get fresh status + custom fields
+    const keys = jiraTickets.map((t) => t.key);
+    const fieldMap = await fetchJiraFieldMap(productLine.jiraConfig as JiraConfig);
+    const fresh = await fetchJiraTicketsByKeys(productLine.jiraConfig as JiraConfig, keys, fieldMap);
+    if (fresh && fresh.length > 0) jiraTickets = fresh;
   }
 
   const jiraBaseUrl = productLine.jiraConfig
@@ -123,77 +131,3 @@ export async function POST(
   });
 }
 
-type JiraIssueResponse = {
-  fields: {
-    summary: string;
-    status: { name: string };
-    issuetype: { name: string };
-    description?: { content?: unknown[] } | string | null;
-    assignee?: { displayName?: string } | null;
-    reporter?: { displayName?: string } | null;
-    priority?: { name?: string } | null;
-    labels?: string[];
-    components?: Array<{ name?: string }>;
-    fixVersions?: Array<{ name?: string }>;
-    created?: string;
-    updated?: string;
-    resolution?: { name?: string } | null;
-  };
-};
-
-function parseJiraIssue(key: string, issue: JiraIssueResponse) {
-  const f = issue.fields;
-  let description: string | null = null;
-  if (typeof f.description === "string") {
-    description = f.description;
-  } else if (f.description && typeof f.description === "object" && Array.isArray(f.description.content)) {
-    description = f.description.content
-      .flatMap((block: unknown) => {
-        const b = block as { content?: Array<{ text?: string }> };
-        return (b.content ?? []).map((c) => c.text ?? "").filter(Boolean);
-      })
-      .join(" ") || null;
-  }
-  return {
-    key,
-    summary: f.summary,
-    status: f.status.name,
-    type: f.issuetype.name,
-    description,
-    assignee: f.assignee?.displayName ?? null,
-    reporter: f.reporter?.displayName ?? null,
-    priority: f.priority?.name ?? null,
-    labels: f.labels ?? [],
-    components: (f.components ?? []).map((c) => c.name ?? "").filter(Boolean),
-    fixVersions: (f.fixVersions ?? []).map((v) => v.name ?? "").filter(Boolean),
-    created: f.created ?? null,
-    updated: f.updated ?? null,
-    resolution: f.resolution?.name ?? null,
-  };
-}
-
-async function fetchJiraTicketsByKeys(
-  config: { baseUrl: string; email: string; apiToken: string },
-  keys: string[]
-): Promise<ReturnType<typeof parseJiraIssue>[] | null> {
-  try {
-    const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
-    const results = await Promise.allSettled(
-      keys.map(async (key) => {
-        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}`, {
-          headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-        });
-        if (!res.ok) return null;
-        return parseJiraIssue(key, (await res.json()) as JiraIssueResponse);
-      })
-    );
-    const tickets = results
-      .filter((r): r is PromiseFulfilledResult<ReturnType<typeof parseJiraIssue>> =>
-        r.status === "fulfilled" && r.value !== null
-      )
-      .map((r) => r.value);
-    return tickets.length > 0 ? tickets : null;
-  } catch {
-    return null;
-  }
-}

@@ -64,6 +64,7 @@ export interface JiraTicket {
   created?: string | null;
   updated?: string | null;
   resolution?: string | null;
+  customFields?: Array<{ name: string; value: string }>;
 }
 
 export interface IntegrationContext {
@@ -324,6 +325,9 @@ ${context.jira.map((t) => {
   if (t.fixVersions && t.fixVersions.length > 0) lines.push(`  Fix versions: ${t.fixVersions.join(", ")}`);
   if (t.description) lines.push(`  Description: ${t.description}`);
   if (t.resolution) lines.push(`  Resolution: ${t.resolution}`);
+  if (t.customFields && t.customFields.length > 0) {
+    for (const cf of t.customFields) lines.push(`  ${cf.name}: ${cf.value}`);
+  }
   return lines.join("\n");
 }).join("\n")}
 `

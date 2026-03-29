@@ -7,7 +7,7 @@ export interface StoredAgentInput {
     description?: string | null; assignee?: string | null; reporter?: string | null;
     priority?: string | null; labels?: string[]; components?: string[];
     fixVersions?: string[]; created?: string | null; updated?: string | null;
-    resolution?: string | null;
+    resolution?: string | null; customFields?: Array<{ name: string; value: string }>;
   }>;
   jiraBaseUrl?: string;
   circleCI?: {
