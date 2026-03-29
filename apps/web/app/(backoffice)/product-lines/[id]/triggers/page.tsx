@@ -26,6 +26,7 @@ export default async function TriggersPage({ params }: Props) {
     include: {
       gitTriggers: { orderBy: { createdAt: "asc" } },
       agent: { select: { id: true } },
+      jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       triggerEvents: {
         where: { status: { not: "skipped" } },
         orderBy: { createdAt: "desc" },
@@ -43,6 +44,13 @@ export default async function TriggersPage({ params }: Props) {
   const protocol = host.startsWith("localhost") ? "http" : "https";
   const appUrl = `${protocol}://${host}`;
 
+  const jiraCfg = productLine.jiraConfig;
+  const jiraBaseUrl = jiraCfg
+    ? jiraCfg.atlassianDomain
+      ? `https://${jiraCfg.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : jiraCfg.baseUrl.replace(/\/+$/, "")
+    : null;
+
   return (
     <TriggersClient
       productLineId={id}
@@ -50,6 +58,7 @@ export default async function TriggersPage({ params }: Props) {
       appUrl={appUrl}
       hasAgent={!!productLine.agent}
       initialEvents={productLine.triggerEvents as TriggerEventWithTrigger[]}
+      jiraBaseUrl={jiraBaseUrl}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Fragment } from "react";
+import React, { useState, useEffect, useRef, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap, RefreshCw, X } from "lucide-react";
@@ -13,9 +13,10 @@ interface Props {
   appUrl: string;
   hasAgent: boolean;
   initialEvents: TriggerEventWithTrigger[];
+  jiraBaseUrl: string | null;
 }
 
-export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent, initialEvents }: Props) {
+export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent, initialEvents, jiraBaseUrl }: Props) {
   const [triggers, setTriggers] = useState(initial);
   const [events, setEvents] = useState<TriggerEventWithTrigger[]>(initialEvents);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -307,7 +308,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
       )}
 
       {/* Run log */}
-      <RunLog events={events} productLineId={productLineId} />
+      <RunLog events={events} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} />
     </div>
   );
 }
@@ -325,7 +326,7 @@ type RerunState = {
   result: TriggerEventWithTrigger | null;
 };
 
-function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; productLineId: string }) {
+function RunLog({ events, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; productLineId: string; jiraBaseUrl: string | null }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<TriggerEventWithTrigger[] | null>(null);
@@ -584,7 +585,7 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-zinc-500 w-full">
-                        <DetailCell detail={buildDetail(ev)} />
+                        <DetailCell detail={buildDetail(ev)} jiraBaseUrl={jiraBaseUrl} />
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         {ev.agentDecision && (
@@ -620,7 +621,35 @@ function RunLog({ events, productLineId }: { events: TriggerEventWithTrigger[]; 
   );
 }
 
-function DetailCell({ detail }: { detail: string }) {
+const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
+
+function renderWithJiraLinks(text: string, jiraBaseUrl: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  JIRA_KEY_RE.lastIndex = 0;
+  while ((match = JIRA_KEY_RE.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    const key = match[1];
+    parts.push(
+      <a
+        key={match.index}
+        href={`${jiraBaseUrl}/browse/${key}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {key}
+      </a>
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
+function DetailCell({ detail, jiraBaseUrl }: { detail: string; jiraBaseUrl: string | null }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -631,9 +660,11 @@ function DetailCell({ detail }: { detail: string }) {
 
   if (detail === "—") return <span className="text-zinc-300">—</span>;
 
+  const content = jiraBaseUrl ? renderWithJiraLinks(detail, jiraBaseUrl) : detail;
+
   return (
     <div className="flex items-start gap-1.5 group">
-      <span className="break-words whitespace-pre-wrap min-w-0">{detail}</span>
+      <span className="break-words whitespace-pre-wrap min-w-0">{content}</span>
       <button
         onClick={handleCopy}
         className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600"
