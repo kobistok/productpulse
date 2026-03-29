@@ -69,6 +69,7 @@ export async function POST(
       },
       targetIsoWeek,
       targetYear,
+      manualRun: true,
     });
   } catch (err) {
     await prisma.triggerEvent.update({

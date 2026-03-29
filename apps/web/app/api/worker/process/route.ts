@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   const job = await request.json();
-  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun } = job;
+  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun, manualRun } = job;
   console.log("[worker] job:", JSON.stringify({ orgId, productLineId, triggerEventId, targetIsoWeek, targetYear }));
 
   const productLines = await prisma.productLine.findMany({
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
   }
 
   for (const output of outputs) {
-    if (output.decision === "update_created" && output.content) {
+    if (output.decision === "update_created" && output.content && !manualRun) {
       const existing = await prisma.update.findUnique({
         where: { productLineId_isoWeek_year: { productLineId: output.productLineId, isoWeek, year } },
         select: { content: true, commitShas: true },

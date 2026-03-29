@@ -7,6 +7,7 @@ export interface AgentJob {
   targetIsoWeek?: number;
   targetYear?: number;
   forceRun?: boolean;
+  manualRun?: boolean;
 }
 
 export async function enqueueAgentJob(job: AgentJob): Promise<void> {
