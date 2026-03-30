@@ -33,6 +33,32 @@ export async function GET(
   return NextResponse.json({ update, agent: productLine.agent ?? null, triggerEvents });
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; updateId: string }> }
+) {
+  const user = await requireSession();
+  const { id, updateId } = await params;
+  const orgId = user.memberships[0]?.orgId;
+
+  const productLine = await prisma.productLine.findFirst({ where: { id, orgId } });
+  if (!productLine) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const { content } = (await req.json()) as { content: string };
+
+  if (!content?.trim()) {
+    // No sections left — delete the whole record
+    await prisma.update.delete({ where: { id: updateId, productLineId: id } });
+    return NextResponse.json({ deleted: true });
+  }
+
+  const updated = await prisma.update.update({
+    where: { id: updateId, productLineId: id },
+    data: { content },
+  });
+  return NextResponse.json(updated);
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; updateId: string }> }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Trash2, Telescope } from "lucide-react";
 import { LocalTime } from "./local-time";
 
 interface ParsedSection {
@@ -83,13 +83,26 @@ function InlineMeta({ text, jiraBaseUrl, timestamp }: { text: string; jiraBaseUr
   );
 }
 
-export function UpdateContent({ content, jiraBaseUrl }: { content: string; jiraBaseUrl?: string }) {
-  const sections = content
+export function UpdateContent({
+  content,
+  jiraBaseUrl,
+  onDeleteSection,
+  onExploreSection,
+}: {
+  content: string;
+  jiraBaseUrl?: string;
+  onDeleteSection?: (index: number, headline: string) => void;
+  onExploreSection?: (sectionContent: string, headline: string) => void;
+}) {
+  const rawSections = content
     .split(/\n\n---\n\n|\n---\n/)
     .map((s) => s.trim())
-    .filter(Boolean)
-    .map(parseSection)
-    .reverse(); // newest push first
+    .filter(Boolean);
+
+  // Display newest first; track original index and raw content for callbacks
+  const sections = rawSections
+    .map((raw, originalIndex) => ({ ...parseSection(raw), originalIndex, raw }))
+    .reverse();
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -110,28 +123,54 @@ export function UpdateContent({ content, jiraBaseUrl }: { content: string; jiraB
         const hasDetails = section.bullets.length > 0 || section.plainLines.length > 0;
         const isExpanded = expanded.has(i);
         return (
-          <div key={i} className="rounded-lg border border-zinc-100 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => hasDetails && toggle(i)}
-              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left bg-white ${
-                hasDetails ? "hover:bg-zinc-50 cursor-pointer" : "cursor-default"
-              }`}
-            >
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium text-zinc-900 leading-snug">
-                  {section.headline}
-                </span>
-                {(section.meta || section.timestamp) && (
-                  <InlineMeta text={section.meta ?? ""} jiraBaseUrl={jiraBaseUrl} timestamp={section.timestamp} />
+          <div key={i} className="group rounded-lg border border-zinc-100 overflow-hidden">
+            <div className="flex items-stretch bg-white">
+              <button
+                type="button"
+                onClick={() => hasDetails && toggle(i)}
+                className={`flex-1 flex items-center justify-between gap-3 px-3 py-2.5 text-left min-w-0 ${
+                  hasDetails ? "hover:bg-zinc-50 cursor-pointer" : "cursor-default"
+                }`}
+              >
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-zinc-900 leading-snug">
+                    {section.headline}
+                  </span>
+                  {(section.meta || section.timestamp) && (
+                    <InlineMeta text={section.meta ?? ""} jiraBaseUrl={jiraBaseUrl} timestamp={section.timestamp} />
+                  )}
+                </div>
+                {hasDetails && (
+                  isExpanded
+                    ? <ChevronDown size={13} className="text-zinc-400 shrink-0" />
+                    : <ChevronRight size={13} className="text-zinc-400 shrink-0" />
                 )}
-              </div>
-              {hasDetails && (
-                isExpanded
-                  ? <ChevronDown size={13} className="text-zinc-400 shrink-0" />
-                  : <ChevronRight size={13} className="text-zinc-400 shrink-0" />
+              </button>
+              {(onExploreSection || onDeleteSection) && (
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 pr-1.5 transition-all shrink-0">
+                  {onExploreSection && (
+                    <button
+                      type="button"
+                      onClick={() => onExploreSection(section.raw, section.headline)}
+                      className="p-1.5 text-zinc-300 hover:text-zinc-600 transition-colors rounded"
+                      title="Explore how this was created"
+                    >
+                      <Telescope size={12} />
+                    </button>
+                  )}
+                  {onDeleteSection && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteSection(section.originalIndex, section.headline)}
+                      className="p-1.5 text-zinc-300 hover:text-red-500 transition-colors rounded"
+                      title="Delete this item"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
             {isExpanded && hasDetails && (
               <div className="px-3 pb-3 pt-1 border-t border-zinc-100 bg-zinc-50/50">
                 {section.bullets.length > 0 && (
