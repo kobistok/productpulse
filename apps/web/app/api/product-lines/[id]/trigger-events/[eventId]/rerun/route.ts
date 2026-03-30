@@ -106,6 +106,7 @@ export async function POST(
       },
       targetIsoWeek,
       targetYear,
+      forceRun: true,
       manualRun: true,
       agentInputOverride,
     });

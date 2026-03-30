@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       const fieldMap = pl.jiraConfig ? jiraFieldMaps.get(pl.jiraConfig.baseUrl) : undefined;
 
       if (agentInputOverride && pl.id === productLineId) {
-        // Re-run: re-fetch Jira tickets for current status (with fresh custom fields), fall back to stored data
+        // Re-run: fetch Jira using stored ticket keys (fresh status + custom fields)
         if (agentInputOverride.jira && agentInputOverride.jira.length > 0) {
           const keys = agentInputOverride.jira.map((t) => t.key);
           const fresh = pl.jiraConfig
@@ -79,6 +79,18 @@ export async function POST(request: NextRequest) {
             : null;
           ctx.jira = fresh && fresh.length > 0 ? fresh : agentInputOverride.jira;
           ctx.jiraBaseUrl = agentInputOverride.jiraBaseUrl;
+        } else if (pl.jiraConfig && gitEvent.commits.length > 0) {
+          // No stored Jira tickets — try extracting keys from stored commit messages
+          const tickets = await fetchJiraTickets(
+            pl.jiraConfig as JiraConfig,
+            gitEvent.commits.map((c) => c.message),
+            fieldMap
+          );
+          if (tickets.length > 0) {
+            ctx.jira = tickets;
+            const domain = pl.jiraConfig.atlassianDomain?.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+            ctx.jiraBaseUrl = domain ? `https://${domain}` : pl.jiraConfig.baseUrl.replace(/\/+$/, "");
+          }
         }
         if (agentInputOverride.circleCI) {
           ctx.circleCI = agentInputOverride.circleCI;
