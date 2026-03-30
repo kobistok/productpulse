@@ -22,7 +22,7 @@ export function JiraSection({ productLineId, existing }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [validating, setValidating] = useState(false);
-  const [validateResult, setValidateResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [validateResult, setValidateResult] = useState<{ ok: boolean; message: string; hint?: string } | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -49,11 +49,11 @@ export function JiraSection({ productLineId, existing }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ baseUrl, email, apiToken: apiToken || undefined }),
     });
-    const data = await res.json() as { ok: boolean; displayName?: string; emailAddress?: string; error?: string };
+    const data = await res.json() as { ok: boolean; displayName?: string; emailAddress?: string; error?: string; hint?: string };
     if (data.ok) {
-      setValidateResult({ ok: true, message: `OK — ${data.displayName ?? data.emailAddress ?? "authenticated"}` });
+      setValidateResult({ ok: true, message: `OK — authenticated as ${data.displayName ?? data.emailAddress ?? "unknown"}` });
     } else {
-      setValidateResult({ ok: false, message: data.error ?? "Validation failed" });
+      setValidateResult({ ok: false, message: data.error ?? "Validation failed", hint: data.hint });
     }
     setValidating(false);
   }
@@ -185,9 +185,12 @@ export function JiraSection({ productLineId, existing }: Props) {
               </p>
 
               {validateResult && (
-                <p className={`text-xs ${validateResult.ok ? "text-green-600" : "text-red-600"}`}>
-                  {validateResult.message}
-                </p>
+                <div className={`text-xs rounded-lg px-3 py-2 ${validateResult.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                  <p className="font-medium">{validateResult.message}</p>
+                  {validateResult.hint && (
+                    <p className="mt-1 text-xs opacity-80">{validateResult.hint}</p>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center justify-between pt-1">
