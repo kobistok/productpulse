@@ -349,7 +349,7 @@ ${contextSection}
 ${currentWeekSection}Recent updates from previous weeks (for context only):
 ${recentUpdatesText}
 ${circleCISection}${jiraSection}
-${manualRun && gitEvent.commits.length === 0 ? `This is a manual re-run. No commit data was stored for this event.${context?.jira?.length ? " Evaluate based on the Jira tickets provided above." : context?.circleCI ? " Evaluate based on the CircleCI context provided above." : " Use the product context and filter rule to decide if there is anything worth reporting."}
+${manualRun && gitEvent.commits.length === 0 ? `This is a manual re-run. No commit data was stored for this event. Use all available context (Jira tickets, CircleCI, product context) and apply the filter rule as normal.
 Repository: ${gitEvent.repo}
 Branch: ${gitEvent.branch}
 ` : `A git push just happened:
