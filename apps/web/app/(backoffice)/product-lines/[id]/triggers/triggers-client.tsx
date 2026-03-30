@@ -317,14 +317,17 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
 
 type LogFilter = "all" | "update" | "no_update" | "failed";
 
+type RerunStep = { label: string; status: "running" | "done" | "error"; detail?: string };
+
 type RerunState = {
   originalEventId: string;
-  newEventId: string;
-  targetIsoWeek: number;
-  targetYear: number;
-  status: "polling" | "ready" | "approving" | "approved";
+  newEventId: string | null;
+  targetIsoWeek: number | null;
+  targetYear: number | null;
+  status: "preparing" | "polling" | "ready" | "approving" | "approved";
+  steps: RerunStep[];
   result: TriggerEventWithTrigger | null;
-  agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> };
+  agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> } | null;
 };
 
 function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null }) {
@@ -333,20 +336,20 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
   const [searchResults, setSearchResults] = useState<TriggerEventWithTrigger[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [rerunning, setRerunning] = useState<string | null>(null); // eventId being re-run
   const [rerun, setRerun] = useState<RerunState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Poll for re-run result
   useEffect(() => {
-    if (!rerun || rerun.status !== "polling") {
+    if (!rerun || rerun.status !== "polling" || !rerun.newEventId) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       return;
     }
     if (pollRef.current) return;
+    const newEventId = rerun.newEventId;
     pollRef.current = setInterval(async () => {
-      const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${rerun.newEventId}`);
+      const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${newEventId}`);
       if (!res.ok) return;
       const ev: TriggerEventWithTrigger = await res.json();
       if (ev.agentDecision) {
@@ -378,18 +381,54 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
   }, [search, productLineId]);
 
   async function handleRerun(eventId: string) {
-    setRerunning(eventId);
+    // Open modal immediately so the user sees progress right away
+    setRerun({ originalEventId: eventId, newEventId: null, targetIsoWeek: null, targetYear: null, status: "preparing", steps: [], result: null, agentInput: null });
+
     const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${eventId}/rerun`, { method: "POST" });
-    setRerunning(null);
-    if (!res.ok) return;
-    const { newEventId, originalEventId: returnedOriginalId, targetIsoWeek, targetYear, agentInput } = await res.json() as {
-      newEventId: string;
-      originalEventId: string;
-      targetIsoWeek: number;
-      targetYear: number;
-      agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> };
-    };
-    setRerun({ originalEventId: returnedOriginalId, newEventId, targetIsoWeek, targetYear, status: "polling", result: null, agentInput });
+    if (!res.ok || !res.body) {
+      setRerun(null);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line) as { type: string; label?: string; status?: string; detail?: string; newEventId?: string; originalEventId?: string; targetIsoWeek?: number; targetYear?: number; agentInput?: RerunState["agentInput"]; message?: string };
+          if (msg.type === "step" && msg.label && msg.status) {
+            const step: RerunStep = { label: msg.label, status: msg.status as RerunStep["status"], detail: msg.detail };
+            setRerun((r) => {
+              if (!r) return null;
+              const steps = [...r.steps];
+              const idx = steps.findIndex((s) => s.label === msg.label && s.status === "running");
+              if (idx >= 0) steps[idx] = step; else steps.push(step);
+              return { ...r, steps };
+            });
+          } else if (msg.type === "done" && msg.newEventId) {
+            setRerun((r) => r ? {
+              ...r,
+              newEventId: msg.newEventId!,
+              targetIsoWeek: msg.targetIsoWeek!,
+              targetYear: msg.targetYear!,
+              status: "polling",
+              agentInput: msg.agentInput ?? null,
+            } : null);
+          } else if (msg.type === "error") {
+            setRerun(null);
+          }
+        } catch { /* ignore parse errors */ }
+      }
+    }
   }
 
   async function handleApprove() {
@@ -457,59 +496,89 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
             <div>
               <p className="text-sm font-semibold text-zinc-900">
-                {rerun.status === "polling" ? "Running agent…" : "Re-run result"}
+                {rerun.status === "preparing" ? "Preparing re-run…" : rerun.status === "polling" ? "Running agent…" : "Re-run result"}
               </p>
-              <p className="text-xs text-zinc-500 mt-0.5">Week {rerun.targetIsoWeek} · {rerun.targetYear}</p>
+              {rerun.targetIsoWeek && (
+                <p className="text-xs text-zinc-500 mt-0.5">Week {rerun.targetIsoWeek} · {rerun.targetYear}</p>
+              )}
             </div>
             <button onClick={() => setRerun(null)} className="text-zinc-400 hover:text-zinc-700 transition-colors">
               <X size={16} />
             </button>
           </div>
 
-          {/* Agent input context — always visible */}
-          <div className="px-6 py-3 border-b border-zinc-100 bg-zinc-50 shrink-0">
-            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2">Agent input</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600">
-              <span><span className="text-zinc-400">Repo</span> {rerun.agentInput.repo}</span>
-              <span><span className="text-zinc-400">Branch</span> {rerun.agentInput.branch}</span>
-            </div>
-            {rerun.agentInput.commits.length > 0 && (
-              <ul className="mt-1.5 space-y-0.5">
-                {rerun.agentInput.commits.map((c) => (
-                  <li key={c.sha} className="text-xs text-zinc-600">
-                    <span className="text-zinc-400 font-mono">{c.sha.slice(0, 7)}</span> {c.message}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {rerun.agentInput.jiraTickets.length > 0 && (
-              <ul className="mt-1.5 space-y-1">
-                {rerun.agentInput.jiraTickets.map((t) => (
-                  <li key={t.key} className="flex items-start gap-2 text-xs">
-                    {jiraBaseUrl ? (
-                      <a
-                        href={`${jiraBaseUrl}/browse/${t.key}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 font-mono text-blue-600 hover:underline"
-                      >
-                        {t.key}
-                      </a>
+          {/* Preparation steps — shown during preparing and polling */}
+          {rerun.steps.length > 0 && (
+            <div className="px-6 py-3 border-b border-zinc-100 bg-zinc-50 shrink-0">
+              <ul className="space-y-1.5">
+                {rerun.steps.map((step, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs">
+                    {step.status === "running" ? (
+                      <RefreshCw size={12} className="animate-spin text-zinc-400 mt-0.5 shrink-0" />
+                    ) : step.status === "done" ? (
+                      <Check size={12} className="text-green-500 mt-0.5 shrink-0" />
                     ) : (
-                      <span className="shrink-0 font-mono text-blue-600">{t.key}</span>
+                      <X size={12} className="text-red-500 mt-0.5 shrink-0" />
                     )}
-                    <span className="text-zinc-600">{t.summary}</span>
-                    <span className="shrink-0 ml-auto text-zinc-400">{t.status}</span>
+                    <span className="text-zinc-700">{step.label}</span>
+                    {step.detail && <span className="text-zinc-400 ml-1">{step.detail}</span>}
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Agent input context — shown once preparation is done */}
+          {rerun.agentInput && (
+            <div className="px-6 py-3 border-b border-zinc-100 bg-zinc-50 shrink-0">
+              <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2">Agent input</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600">
+                <span><span className="text-zinc-400">Repo</span> {rerun.agentInput.repo}</span>
+                <span><span className="text-zinc-400">Branch</span> {rerun.agentInput.branch}</span>
+              </div>
+              {rerun.agentInput.commits.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5">
+                  {rerun.agentInput.commits.map((c) => (
+                    <li key={c.sha} className="text-xs text-zinc-600">
+                      <span className="text-zinc-400 font-mono">{c.sha.slice(0, 7)}</span> {c.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {rerun.agentInput.jiraTickets.length > 0 && (
+                <ul className="mt-1.5 space-y-1">
+                  {rerun.agentInput.jiraTickets.map((t) => (
+                    <li key={t.key} className="flex items-start gap-2 text-xs">
+                      {jiraBaseUrl ? (
+                        <a
+                          href={`${jiraBaseUrl}/browse/${t.key}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 font-mono text-blue-600 hover:underline"
+                        >
+                          {t.key}
+                        </a>
+                      ) : (
+                        <span className="shrink-0 font-mono text-blue-600">{t.key}</span>
+                      )}
+                      <span className="text-zinc-600">{t.summary}</span>
+                      <span className="shrink-0 ml-auto text-zinc-400">{t.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div className="px-6 py-5 overflow-y-auto flex-1">
-            {rerun.status === "polling" ? (
-              <div className="flex items-center justify-center py-8 gap-2 text-zinc-400">
-                <RefreshCw size={16} className="animate-spin" />
+            {rerun.status === "preparing" ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-zinc-400">
+                <RefreshCw size={14} className="animate-spin" />
+                <span className="text-sm">Preparing…</span>
+              </div>
+            ) : rerun.status === "polling" ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-zinc-400">
+                <RefreshCw size={14} className="animate-spin" />
                 <span className="text-sm">Agent is running…</span>
               </div>
             ) : rerun.status === "approved" ? (
@@ -652,11 +721,11 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
                         {ev.agentDecision && (
                           <button
                             onClick={() => handleRerun(ev.id)}
-                            disabled={rerunning === ev.id || rerun?.status === "polling"}
+                            disabled={rerun !== null}
                             className="text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-40"
                             title="Re-run agent for this event"
                           >
-                            <RefreshCw size={12} className={rerunning === ev.id ? "animate-spin" : ""} />
+                            <RefreshCw size={12} className={rerun?.originalEventId === ev.id && rerun.status === "preparing" ? "animate-spin" : ""} />
                           </button>
                         )}
                       </td>
