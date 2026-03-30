@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     }),
     gitEvent,
     integrationContext,
-    { forceRun }
+    { forceRun, manualRun }
   );
 
   const created: string[] = [];

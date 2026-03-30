@@ -84,16 +84,17 @@ export async function runProductPulseAgent(
   productLines: AgentProductLine[],
   gitEvent: GitEvent,
   integrationContext?: Record<string, IntegrationContext>,
-  options?: { forceRun?: boolean }
+  options?: { forceRun?: boolean; manualRun?: boolean }
 ): Promise<AgentOutput[]> {
   const outputs: AgentOutput[] = [];
   const forceRun = options?.forceRun ?? false;
+  const manualRun = options?.manualRun ?? false;
 
   for (const productLine of productLines) {
     const result = await generateText({
       model: anthropic("claude-sonnet-4-6"),
       system: SYSTEM_PROMPT,
-      prompt: buildPrompt(productLine, gitEvent, integrationContext?.[productLine.id], forceRun),
+      prompt: buildPrompt(productLine, gitEvent, integrationContext?.[productLine.id], forceRun, manualRun),
       tools: {
         create_update: tool({
           description:
@@ -290,7 +291,8 @@ function buildPrompt(
   productLine: AgentProductLine,
   gitEvent: GitEvent,
   context?: IntegrationContext,
-  forceRun?: boolean
+  forceRun?: boolean,
+  manualRun?: boolean
 ): string {
   const currentWeekSection = productLine.currentWeekContent
     ? `This week's update so far (you are ADDING to it — do NOT rewrite or repeat what's already there):\n${productLine.currentWeekContent}\n\n`
@@ -347,7 +349,10 @@ ${contextSection}
 ${currentWeekSection}Recent updates from previous weeks (for context only):
 ${recentUpdatesText}
 ${circleCISection}${jiraSection}
-A git push just happened:
+${manualRun && gitEvent.commits.length === 0 ? `This is a manual re-run. No commit data was stored for this event — evaluate based on the Jira tickets and CircleCI context provided above.
+Repository: ${gitEvent.repo}
+Branch: ${gitEvent.branch}
+` : `A git push just happened:
 Repository: ${gitEvent.repo}
 Branch: ${gitEvent.branch}
 Files changed: ${gitEvent.filesChanged.slice(0, 30).join(", ")}${gitEvent.filesChanged.length > 30 ? ` (+${gitEvent.filesChanged.length - 30} more)` : ""}
@@ -357,7 +362,7 @@ ${gitEvent.commits.map((c) => `- ${c.sha.slice(0, 7)} ${c.message} (${c.author})
 
 Diff summary:
 ${gitEvent.diffSummary}
-
+`}
 ${forceRun ? `This is a manual re-run. You MUST call create_update — do not skip. Use all available context (commits, Jira tickets, CircleCI status, product context) to write a meaningful update. If commits are empty, base the update on the integration data and product context.
 
 ` : productLine.filterRule ? `Filter — only create an update if ALL of the following conditions are met:
