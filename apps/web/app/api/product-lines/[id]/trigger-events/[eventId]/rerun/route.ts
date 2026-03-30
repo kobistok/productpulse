@@ -61,7 +61,6 @@ export async function POST(
       if (fresh) jiraTickets = fresh;
     }
   } else if (jiraTickets.length > 0 && productLine.jiraConfig) {
-    // Re-fetch stored tickets to get fresh status + custom fields
     const keys = jiraTickets.map((t) => t.key);
     const fieldMap = await fetchJiraFieldMap(productLine.jiraConfig as JiraConfig);
     const fresh = await fetchJiraTicketsByKeys(productLine.jiraConfig as JiraConfig, keys, fieldMap);

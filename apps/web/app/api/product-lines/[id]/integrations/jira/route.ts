@@ -30,7 +30,8 @@ export async function PUT(
   const productLine = await prisma.productLine.findFirst({ where: { id, orgId } });
   if (!productLine) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { baseUrl, atlassianDomain, email, apiToken } = await request.json();
+  const { baseUrl: rawBaseUrl, atlassianDomain, email, apiToken } = await request.json();
+  const baseUrl = rawBaseUrl?.trim().replace(/\/+$/, "");
   if (!baseUrl || !email) {
     return NextResponse.json({ error: "baseUrl and email are required" }, { status: 400 });
   }

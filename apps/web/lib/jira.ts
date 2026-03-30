@@ -15,19 +15,27 @@ export type JiraConfig = {
 export async function fetchJiraFieldMap(
   config: JiraConfig
 ): Promise<Map<string, string>> {
+  const url = `${config.baseUrl.replace(/\/+$/, "")}/rest/api/3/field`;
   try {
     const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
-    const res = await fetch(`${config.baseUrl}/rest/api/3/field`, {
+    console.log(`[jira] GET ${url} (email: ${config.email})`);
+    const res = await fetch(url, {
       headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
     });
-    if (!res.ok) return new Map();
+    console.log(`[jira] GET ${url} → ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[jira] field map error body: ${body}`);
+      return new Map();
+    }
     const fields = (await res.json()) as Array<{ id: string; name: string; custom?: boolean }>;
     const map = new Map<string, string>();
     for (const f of fields) {
       map.set(f.id, f.name);
     }
     return map;
-  } catch {
+  } catch (err) {
+    console.error(`[jira] GET ${url} threw:`, err);
     return new Map();
   }
 }
@@ -180,14 +188,22 @@ export async function fetchJiraTicketsByKeys(
   fieldMap?: Map<string, string>
 ): Promise<ParsedJiraTicket[] | null> {
   if (keys.length === 0) return null;
+  const baseUrl = config.baseUrl.replace(/\/+$/, "");
   try {
     const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
     const results = await Promise.allSettled(
       keys.map(async (key) => {
-        const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${key}`, {
+        const url = `${baseUrl}/rest/api/3/issue/${key}`;
+        console.log(`[jira] GET ${url} (email: ${config.email})`);
+        const res = await fetch(url, {
           headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
         });
-        if (!res.ok) return null;
+        console.log(`[jira] GET ${url} → ${res.status} ${res.statusText}`);
+        if (!res.ok) {
+          const body = await res.text();
+          console.error(`[jira] issue fetch error body: ${body}`);
+          return null;
+        }
         return parseJiraIssue(key, (await res.json()) as JiraIssueResponse, fieldMap);
       })
     );
@@ -197,8 +213,10 @@ export async function fetchJiraTicketsByKeys(
           r.status === "fulfilled" && r.value !== null
       )
       .map((r) => r.value);
+    console.log(`[jira] fetchJiraTicketsByKeys: ${tickets.length}/${keys.length} tickets fetched`);
     return tickets.length > 0 ? tickets : null;
-  } catch {
+  } catch (err) {
+    console.error(`[jira] fetchJiraTicketsByKeys threw:`, err);
     return null;
   }
 }
