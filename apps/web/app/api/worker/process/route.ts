@@ -118,7 +118,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (ctx.circleCI || ctx.jira) {
+      // Always set context for re-runs so the agent receives the manualRun signal
+      // even when there's no Jira or CircleCI data
+      if (ctx.circleCI || ctx.jira || (agentInputOverride && pl.id === productLineId)) {
         integrationContext[pl.id] = ctx;
       }
     })
