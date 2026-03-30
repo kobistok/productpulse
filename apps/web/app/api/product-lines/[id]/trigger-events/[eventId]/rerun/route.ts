@@ -74,11 +74,11 @@ export async function POST(
       : productLine.jiraConfig.baseUrl.replace(/\/+$/, "")
     : (storedInput?.jiraBaseUrl ?? undefined);
 
-  const agentInputOverride: StoredAgentInput | undefined = storedInput
-    ? { ...storedInput, jira: jiraTickets.length > 0 ? jiraTickets : storedInput.jira, jiraBaseUrl }
-    : jiraTickets.length > 0
-    ? { commits: [], filesChanged: [], diffSummary: "", jira: jiraTickets, jiraBaseUrl }
-    : undefined;
+  // Always pass agentInputOverride so the worker knows this is a re-run.
+  // Without it, the worker treats it as a normal webhook with empty commits and skips.
+  const agentInputOverride: StoredAgentInput = storedInput
+    ? { ...storedInput, jira: jiraTickets.length > 0 ? jiraTickets : (storedInput.jira ?? []), jiraBaseUrl }
+    : { commits: [], filesChanged: [], diffSummary: "", jira: jiraTickets, jiraBaseUrl };
 
   // Create a hidden temp event to hold the re-run result — not shown in the run log
   const tempEvent = await prisma.triggerEvent.create({

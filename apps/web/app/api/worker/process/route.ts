@@ -94,6 +94,9 @@ export async function POST(request: NextRequest) {
         }
         if (agentInputOverride.circleCI) {
           ctx.circleCI = agentInputOverride.circleCI;
+        } else if (pl.circleCIConfig) {
+          // No stored CircleCI data — fetch fresh for re-run
+          ctx.circleCI = await fetchCircleCIContext(pl.circleCIConfig, gitEvent.commits.map((c) => c.sha));
         }
       } else {
         if (pl.circleCIConfig) {
