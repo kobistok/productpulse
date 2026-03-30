@@ -21,6 +21,8 @@ export function JiraSection({ productLineId, existing }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validateResult, setValidateResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +39,23 @@ export function JiraSection({ productLineId, existing }: Props) {
       setTimeout(() => { setSaved(false); setOpen(false); }, 1500);
     }
     setSaving(false);
+  }
+
+  async function handleValidate() {
+    setValidating(true);
+    setValidateResult(null);
+    const res = await fetch(`/api/product-lines/${productLineId}/integrations/jira/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl, email, apiToken: apiToken || undefined }),
+    });
+    const data = await res.json() as { ok: boolean; displayName?: string; emailAddress?: string; error?: string };
+    if (data.ok) {
+      setValidateResult({ ok: true, message: `OK — ${data.displayName ?? data.emailAddress ?? "authenticated"}` });
+    } else {
+      setValidateResult({ ok: false, message: data.error ?? "Validation failed" });
+    }
+    setValidating(false);
   }
 
   async function handleDelete() {
@@ -165,6 +184,12 @@ export function JiraSection({ productLineId, existing }: Props) {
                 </a>
               </p>
 
+              {validateResult && (
+                <p className={`text-xs ${validateResult.ok ? "text-green-600" : "text-red-600"}`}>
+                  {validateResult.message}
+                </p>
+              )}
+
               <div className="flex items-center justify-between pt-1">
                 {connected ? (
                   <button
@@ -178,9 +203,14 @@ export function JiraSection({ productLineId, existing }: Props) {
                 ) : (
                   <span />
                 )}
-                <Button type="submit" size="sm" disabled={saving}>
-                  {saving ? "Saving..." : saved ? "Saved!" : connected ? "Update" : "Connect"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={handleValidate} disabled={validating || !baseUrl || !email}>
+                    {validating ? "Validating..." : "Validate token"}
+                  </Button>
+                  <Button type="submit" size="sm" disabled={saving}>
+                    {saving ? "Saving..." : saved ? "Saved!" : connected ? "Update" : "Connect"}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>
