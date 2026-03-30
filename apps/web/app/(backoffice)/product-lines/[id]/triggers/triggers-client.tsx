@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap, RefreshCw, X } from "lucide-react";
+import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap, RefreshCw, X, Telescope } from "lucide-react";
+import type { StoredAgentInput } from "@/lib/cloud-tasks";
 import type { GitTrigger } from "@productpulse/db";
 import type { TriggerEventWithTrigger } from "./page";
 
@@ -14,9 +15,10 @@ interface Props {
   hasAgent: boolean;
   initialEvents: TriggerEventWithTrigger[];
   jiraBaseUrl: string | null;
+  agentConfig: { filterRule: string | null; productContext: string | null } | null;
 }
 
-export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent, initialEvents, jiraBaseUrl }: Props) {
+export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAgent, initialEvents, jiraBaseUrl, agentConfig }: Props) {
   const [triggers, setTriggers] = useState(initial);
   const [events, setEvents] = useState<TriggerEventWithTrigger[]>(initialEvents);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -308,7 +310,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
       )}
 
       {/* Run log */}
-      <RunLog events={events} setEvents={setEvents} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} />
+      <RunLog events={events} setEvents={setEvents} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} agentConfig={agentConfig} />
     </div>
   );
 }
@@ -330,13 +332,14 @@ type RerunState = {
   agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> } | null;
 };
 
-function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null }) {
+function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null; agentConfig: { filterRule: string | null; productContext: string | null } | null }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<TriggerEventWithTrigger[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [rerun, setRerun] = useState<RerunState | null>(null);
+  const [exploreEvent, setExploreEvent] = useState<TriggerEventWithTrigger | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -718,16 +721,27 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
                         <DetailCell detail={buildDetail(ev)} jiraBaseUrl={jiraBaseUrl} />
                       </td>
                       <td className="px-4 py-2.5 text-right">
-                        {ev.agentDecision && (
-                          <button
-                            onClick={() => handleRerun(ev.id)}
-                            disabled={rerun !== null}
-                            className="text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-40"
-                            title="Re-run agent for this event"
-                          >
-                            <RefreshCw size={12} className={rerun?.originalEventId === ev.id && rerun.status === "preparing" ? "animate-spin" : ""} />
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-1.5">
+                          {ev.agentDecision && (
+                            <button
+                              onClick={() => setExploreEvent(ev)}
+                              className="text-zinc-400 hover:text-zinc-700 transition-colors"
+                              title="Explore agent workflow"
+                            >
+                              <Telescope size={12} />
+                            </button>
+                          )}
+                          {ev.agentDecision && (
+                            <button
+                              onClick={() => handleRerun(ev.id)}
+                              disabled={rerun !== null}
+                              className="text-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-40"
+                              title="Re-run agent for this event"
+                            >
+                              <RefreshCw size={12} className={rerun?.originalEventId === ev.id && rerun.status === "preparing" ? "animate-spin" : ""} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {isExpanded && ev.updateContent && (
@@ -747,7 +761,156 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl }: { events: Tri
         </table>
       </div>
     </div>
+
+    {/* ── Explore modal ──────────────────────────────────────────────────── */}
+    {exploreEvent && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        onClick={() => setExploreEvent(null)}
+      >
+        <div
+          className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Agent Workflow</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {exploreEvent.source === "manual" ? "Manual run" : exploreEvent.repo ?? "Webhook"}{exploreEvent.branch ? ` · ${exploreEvent.branch}` : ""}
+                {" · "}{formatTime(exploreEvent.createdAt)}
+              </p>
+            </div>
+            <button onClick={() => setExploreEvent(null)} className="text-zinc-400 hover:text-zinc-700 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+            {/* Agent configuration */}
+            <section>
+              <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-3">Agent configuration</p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-zinc-600 mb-1">Product context</p>
+                  {agentConfig?.productContext ? (
+                    <p className="text-xs text-zinc-700 whitespace-pre-wrap bg-zinc-50 rounded-lg px-3 py-2">{agentConfig.productContext}</p>
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic">Not configured</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-zinc-600 mb-1">Filter rule</p>
+                  {agentConfig?.filterRule ? (
+                    <p className="text-xs text-zinc-700 whitespace-pre-wrap bg-zinc-50 rounded-lg px-3 py-2">{agentConfig.filterRule}</p>
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic">No filter rule — agent uses default guidelines</p>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Run input & decision */}
+            <section>
+              <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-3">Run details</p>
+              <ExploreRunCard ev={exploreEvent} jiraBaseUrl={jiraBaseUrl} />
+            </section>
+          </div>
+        </div>
+      </div>
+    )}
     </>
+  );
+}
+
+function extractDecisionReason(workerDetail: string | null | undefined): string | null {
+  if (!workerDetail) return null;
+  const m = workerDetail.match(/Decision:\s*(.+?)(?:\s*·|$)/);
+  return m ? m[1].trim() : null;
+}
+
+function ExploreRunCard({ ev, jiraBaseUrl }: { ev: TriggerEventWithTrigger; jiraBaseUrl: string | null }) {
+  const input = ev.agentInputData as StoredAgentInput | null;
+  const commits = input?.commits ?? [];
+  const jiraTickets = input?.jira ?? [];
+  const filesChanged = input?.filesChanged ?? [];
+  const effectiveJiraBaseUrl = input?.jiraBaseUrl ?? jiraBaseUrl ?? undefined;
+  const decisionReason = extractDecisionReason(ev.workerDetail);
+  const skipReason = ev.workerDetail?.match(/Agent:\s*(.+?)(?:\s*·|$)/)?.[1]?.trim() ?? null;
+
+  return (
+    <div className="border border-zinc-200 rounded-lg overflow-hidden">
+      <div className="px-4 py-3 space-y-3">
+        {/* Decision */}
+        {ev.agentDecision === "update_created" && decisionReason && (
+          <div className="bg-green-50 border border-green-100 rounded-md px-3 py-2">
+            <p className="text-[11px] font-semibold text-green-700 uppercase tracking-wide mb-0.5">Why this update was created</p>
+            <p className="text-xs text-green-800">{decisionReason}</p>
+          </div>
+        )}
+        {ev.agentDecision !== "update_created" && skipReason && (
+          <div className="bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2">
+            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-0.5">Why no update was created</p>
+            <p className="text-xs text-zinc-600">{skipReason}</p>
+          </div>
+        )}
+
+        {commits.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Commits</p>
+            <ul className="space-y-0.5">
+              {commits.map((c) => (
+                <li key={c.sha} className="text-xs text-zinc-600">
+                  <span className="font-mono text-zinc-400">{c.sha.slice(0, 7)}</span>{" "}
+                  {c.message}
+                  {c.author && <span className="text-zinc-400"> · {c.author}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {jiraTickets.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Jira tickets</p>
+            <ul className="space-y-1">
+              {jiraTickets.map((t) => (
+                <li key={t.key} className="flex items-start gap-2 text-xs">
+                  {effectiveJiraBaseUrl ? (
+                    <a href={`${effectiveJiraBaseUrl}/browse/${t.key}`} target="_blank" rel="noopener noreferrer" className="shrink-0 font-mono text-blue-600 hover:underline">{t.key}</a>
+                  ) : (
+                    <span className="shrink-0 font-mono text-blue-600">{t.key}</span>
+                  )}
+                  <span className="text-zinc-600">{t.summary}</span>
+                  <span className="shrink-0 ml-auto text-zinc-400">{t.status}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {filesChanged.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1">Files changed</p>
+            <p className="text-xs text-zinc-500">{filesChanged.length} file{filesChanged.length !== 1 ? "s" : ""}</p>
+          </div>
+        )}
+
+        {commits.length === 0 && jiraTickets.length === 0 && filesChanged.length === 0 && (
+          <p className="text-xs text-zinc-400 italic">No input context stored for this run.</p>
+        )}
+
+        {ev.updateContent && (
+          <div className="border-t border-zinc-100 pt-3">
+            <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <Check size={10} className="text-green-500" /> Generated update
+            </p>
+            <pre className="whitespace-pre-wrap text-xs text-zinc-700 font-sans leading-relaxed">
+              {ev.updateContent}
+            </pre>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

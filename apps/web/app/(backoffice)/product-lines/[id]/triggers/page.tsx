@@ -25,7 +25,7 @@ export default async function TriggersPage({ params }: Props) {
     where: { id, orgId },
     include: {
       gitTriggers: { orderBy: { createdAt: "asc" } },
-      agent: { select: { id: true } },
+      agent: { select: { id: true, filterRule: true, productContext: true } },
       jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       triggerEvents: {
         where: { status: { notIn: ["skipped", "rerun_pending"] } },
@@ -59,6 +59,7 @@ export default async function TriggersPage({ params }: Props) {
       hasAgent={!!productLine.agent}
       initialEvents={productLine.triggerEvents as TriggerEventWithTrigger[]}
       jiraBaseUrl={jiraBaseUrl}
+      agentConfig={productLine.agent ? { filterRule: productLine.agent.filterRule ?? null, productContext: productLine.agent.productContext ?? null } : null}
     />
   );
 }
