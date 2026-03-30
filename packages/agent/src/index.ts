@@ -77,6 +77,7 @@ export interface AgentOutput {
   productLineId: string;
   decision: "update_created" | "skipped";
   content?: string;
+  updateReason?: string;
   skipReason?: string;
 }
 
@@ -100,17 +101,23 @@ export async function runProductPulseAgent(
           description:
             "Create a user-facing product update for this product line based on what was shipped.",
           parameters: z.object({
+            reason: z
+              .string()
+              .describe(
+                "One sentence explaining why this push is relevant and warrants an update (e.g. which filter rule it matches or what product area it affects)."
+              ),
             content: z
               .string()
               .describe(
                 "Markdown content for the update. Clear, concise, and written for end users — not engineers."
               ),
           }),
-          execute: async ({ content }) => {
+          execute: async ({ reason, content }) => {
             outputs.push({
               productLineId: productLine.id,
               decision: "update_created",
               content,
+              updateReason: reason,
             });
             return { success: true };
           },

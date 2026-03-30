@@ -24,6 +24,7 @@ type WorkflowEvent = {
   source: string;
   updateContent: string | null;
   workerDetail: string | null;
+  agentDecision: string | null;
   agentInputData: StoredAgentInput | null;
 };
 
@@ -46,6 +47,13 @@ interface Props {
 // Strip the <!-- ts:ISO --> comment that the worker prepends to each section
 function stripTsComment(raw: string): string {
   return raw.replace(/^<!--\s*ts:[^\s>]+\s*-->\n?/, "").trimStart();
+}
+
+// Extract the "Decision: ..." segment from workerDetail
+function extractDecisionReason(workerDetail: string | null): string | null {
+  if (!workerDetail) return null;
+  const m = workerDetail.match(/Decision:\s*(.+?)(?:\s*·|$)/);
+  return m ? m[1].trim() : null;
 }
 
 export function UpdatesSection({
@@ -347,6 +355,7 @@ function RunCard({ ev, jiraBaseUrl }: { ev: WorkflowEvent; jiraBaseUrl?: string 
   const jiraTickets = input?.jira ?? [];
   const filesChanged = input?.filesChanged ?? [];
   const effectiveJiraBaseUrl = input?.jiraBaseUrl ?? jiraBaseUrl;
+  const decisionReason = extractDecisionReason(ev.workerDetail);
 
   return (
     <div className="border border-zinc-200 rounded-lg overflow-hidden">
@@ -370,6 +379,13 @@ function RunCard({ ev, jiraBaseUrl }: { ev: WorkflowEvent; jiraBaseUrl?: string 
       </div>
 
       <div className="px-4 py-3 space-y-3">
+        {decisionReason && (
+          <div className="bg-green-50 border border-green-100 rounded-md px-3 py-2">
+            <p className="text-[11px] font-semibold text-green-700 uppercase tracking-wide mb-0.5">Why this update was created</p>
+            <p className="text-xs text-green-800">{decisionReason}</p>
+          </div>
+        )}
+
         {commits.length > 0 && (
           <div>
             <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Commits</p>

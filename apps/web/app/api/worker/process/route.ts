@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
     const output = outputs[0];
     const workerDetailParts: string[] = [];
     if (integrationParts.length > 0) workerDetailParts.push(integrationParts.join(" · "));
+    if (output?.decision === "update_created" && output.updateReason) workerDetailParts.push(`Decision: ${output.updateReason}`);
     if (output?.decision === "skipped" && output.skipReason) workerDetailParts.push(`Agent: ${output.skipReason}`);
 
     // Step 1: always write agentDecision and workerDetail
