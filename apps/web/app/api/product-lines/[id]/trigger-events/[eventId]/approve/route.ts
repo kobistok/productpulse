@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import type { StoredAgentInput } from "@/lib/cloud-tasks";
 
 export async function POST(
   req: NextRequest,
@@ -36,19 +35,13 @@ export async function POST(
         data: { productLineId, isoWeek, year, content: event.updateContent, commitShas: [] },
       });
 
-  // On approval, update the original event to reflect the accepted result
+  // On approval, mark the original event as accepted — do not overwrite workerDetail
   if (originalEventId) {
-    const inputData = event.agentInputData as StoredAgentInput | null;
-    const workerDetailParts: string[] = [];
-    if (inputData?.jira && inputData.jira.length > 0) {
-      workerDetailParts.push(`Jira: ${inputData.jira.map((t) => `${t.key} (${t.status})`).join(", ")}`);
-    }
     prisma.triggerEvent.update({
       where: { id: originalEventId },
       data: {
         agentDecision: "update_created",
         updateContent: event.updateContent,
-        workerDetail: workerDetailParts.join(" · ") || null,
       },
     }).catch(() => {});
   }
