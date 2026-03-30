@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 
 interface Props {
   productLineId: string;
-  existing: { baseUrl: string; atlassianDomain: string | null; email: string } | null;
+  existing: { baseUrl: string; email: string } | null;
 }
 
 export function JiraSection({ productLineId, existing }: Props) {
@@ -15,7 +15,6 @@ export function JiraSection({ productLineId, existing }: Props) {
   const [open, setOpen] = useState(false);
 
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? "");
-  const [atlassianDomain, setAtlassianDomain] = useState(existing?.atlassianDomain ?? "");
   const [email, setEmail] = useState(existing?.email ?? "");
   const [apiToken, setApiToken] = useState("");
   const [saving, setSaving] = useState(false);
@@ -30,7 +29,7 @@ export function JiraSection({ productLineId, existing }: Props) {
     const res = await fetch(`/api/product-lines/${productLineId}/integrations/jira`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baseUrl, atlassianDomain, email, apiToken }),
+      body: JSON.stringify({ baseUrl, email, apiToken }),
     });
     if (res.ok) {
       setConnected(true);
@@ -64,7 +63,6 @@ export function JiraSection({ productLineId, existing }: Props) {
     if (res.ok) {
       setConnected(false);
       setBaseUrl("");
-      setAtlassianDomain("");
       setEmail("");
       setApiToken("");
       setOpen(false);
@@ -122,28 +120,16 @@ export function JiraSection({ productLineId, existing }: Props) {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600">Jira base URL</label>
-                  <Input
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="https://yourcompany.atlassian.net"
-                    type="url"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600">
-                    Atlassian domain <span className="text-zinc-400 font-normal">(for ticket links)</span>
-                  </label>
-                  <Input
-                    value={atlassianDomain}
-                    onChange={(e) => setAtlassianDomain(e.target.value)}
-                    placeholder="yourcompany.atlassian.net"
-                  />
-                </div>
+            <form onSubmit={handleSave} className="px-6 py-5 space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-zinc-600">Jira URL</label>
+                <Input
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://yourcompany.atlassian.net"
+                  type="url"
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -160,7 +146,7 @@ export function JiraSection({ productLineId, existing }: Props) {
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-zinc-600">
                     API Token{" "}
-                    {connected && <span className="text-zinc-400 font-normal">(leave blank to keep existing)</span>}
+                    {connected && <span className="text-zinc-400 font-normal">(leave blank to keep)</span>}
                   </label>
                   <Input
                     type="password"
