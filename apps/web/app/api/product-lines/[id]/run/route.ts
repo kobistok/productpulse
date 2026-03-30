@@ -50,6 +50,7 @@ export async function POST(
         payload: { ref: "refs/heads/main", repository: { full_name: "manual run" }, commits: [] },
         targetIsoWeek,
         targetYear,
+        manualRun: true,
       });
     } catch (err) {
       console.error("[run] Failed to enqueue agent job:", err);
@@ -105,6 +106,7 @@ export async function POST(
         },
         targetIsoWeek,
         targetYear,
+        manualRun: true,
       });
       queued++;
     } catch (err) {
