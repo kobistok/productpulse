@@ -3,10 +3,8 @@ import { requireSession } from "@/lib/session";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Bot, GitBranch, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { getISOWeek, getISOWeekYear } from "date-fns";
-import { UpdateContent } from "@/components/update-content";
-import { LocalTime } from "@/components/local-time";
+import { UpdatesSection } from "./updates-section";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -40,9 +38,14 @@ export default async function ProductLineOverviewPage({ params }: Props) {
 
   const currentWeek = getISOWeek(new Date());
   const currentYear = getISOWeekYear(new Date());
-  const thisWeekUpdate = productLine.updates.find(
-    (u) => u.isoWeek === currentWeek && u.year === currentYear
-  );
+
+  const updates = productLine.updates.map((u) => ({
+    id: u.id,
+    isoWeek: u.isoWeek,
+    year: u.year,
+    content: u.content,
+    updatedAt: u.updatedAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-6">
@@ -89,50 +92,15 @@ export default async function ProductLineOverviewPage({ params }: Props) {
         </Link>
       </div>
 
-      {/* This week */}
-      <section>
-        <h2 className="text-sm font-semibold text-zinc-900 mb-3">
-          This week (W{currentWeek})
-        </h2>
-        <div className="bg-white border border-zinc-200 rounded-xl p-5">
-          {thisWeekUpdate ? (
-            <UpdateContent content={thisWeekUpdate.content} jiraBaseUrl={jiraBaseUrl} />
-          ) : (
-            <p className="text-sm text-zinc-400 italic">
-              No update generated yet this week.{" "}
-              {!productLine.agent && (
-                <Link href={`/product-lines/${id}/agent`} className="text-zinc-600 underline underline-offset-2">
-                  Configure an agent
-                </Link>
-              )}{" "}
-              {productLine.gitTriggers.length === 0 && (
-                <Link href={`/product-lines/${id}/triggers`} className="text-zinc-600 underline underline-offset-2">
-                  Add a git trigger
-                </Link>
-              )}
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Update history */}
-      {productLine.updates.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-zinc-900 mb-3">Recent updates</h2>
-          <div className="space-y-3">
-            {productLine.updates.map((u) => (
-              <div key={u.id} className="bg-white border border-zinc-200 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <p className="text-xs font-medium text-zinc-400">W{u.isoWeek} {u.year}</p>
-                  <span className="text-xs text-zinc-300">·</span>
-                  <LocalTime iso={u.updatedAt.toISOString()} className="text-xs text-zinc-400" />
-                </div>
-                <UpdateContent content={u.content} jiraBaseUrl={jiraBaseUrl} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <UpdatesSection
+        productLineId={id}
+        currentWeek={currentWeek}
+        currentYear={currentYear}
+        updates={updates}
+        jiraBaseUrl={jiraBaseUrl}
+        hasAgent={!!productLine.agent}
+        hasTriggersConfigured={productLine.gitTriggers.length > 0}
+      />
     </div>
   );
 }
