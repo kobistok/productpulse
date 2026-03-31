@@ -62,19 +62,27 @@ export async function POST(
         );
 
         if (weekEvents.length === 0) {
-          send({ type: "error", message: "No events found for this week" });
+          send({ type: "error", message: `No agent runs found for W${isoWeek} · ${year}` });
           controller.close();
           return;
         }
+
+        // Summarise original week events for the "why missed" explanation in the UI
+        const originalWeekEvents = weekEvents.map((ev) => ({
+          id: ev.id,
+          repo: ev.repo ?? null,
+          branch: ev.branch ?? null,
+          source: ev.source,
+          agentDecision: ev.agentDecision,
+          workerDetail: ev.workerDetail ?? null,
+        }));
 
         const total = weekEvents.length;
 
         // Fetch Jira field map once upfront
         let fieldMap: Map<string, string> | null = null;
         if (productLine.jiraConfig) {
-          try {
-            fieldMap = await fetchJiraFieldMap(productLine.jiraConfig as JiraConfig);
-          } catch { /* fall back to stored data */ }
+          try { fieldMap = await fetchJiraFieldMap(productLine.jiraConfig as JiraConfig); } catch { /* ignore */ }
         }
 
         const jiraBaseUrl = productLine.jiraConfig
@@ -95,9 +103,7 @@ export async function POST(
             "manual run";
           const branch =
             originalEvent.branch ??
-            (originalEvent.trigger?.branchFilter?.includes("*")
-              ? "main"
-              : originalEvent.trigger?.branchFilter) ??
+            (originalEvent.trigger?.branchFilter?.includes("*") ? "main" : originalEvent.trigger?.branchFilter) ??
             "main";
 
           send({ type: "event_start", index: i, total, repo, branch, source: originalEvent.source });
@@ -116,6 +122,9 @@ export async function POST(
               } catch { /* use stored */ }
             }
           }
+
+          const commitCount = storedInput?.commits?.length ?? 0;
+          const jiraKeys = jiraTickets.map((t) => t.key);
 
           const agentInputOverride: StoredAgentInput = storedInput
             ? { ...storedInput, jira: jiraTickets.length > 0 ? jiraTickets : (storedInput.jira ?? []), jiraBaseUrl }
@@ -139,11 +148,7 @@ export async function POST(
               triggerId: originalEvent.triggerId ?? undefined,
               productLineId,
               orgId,
-              payload: {
-                ref: `refs/heads/${branch}`,
-                repository: { full_name: repo },
-                commits: [],
-              },
+              payload: { ref: `refs/heads/${branch}`, repository: { full_name: repo }, commits: [] },
               targetIsoWeek: isoWeek,
               targetYear: year,
               manualRun: true,
@@ -151,7 +156,7 @@ export async function POST(
             });
 
             newEventIds.push(tempEvent.id);
-            send({ type: "event_queued", index: i, newEventId: tempEvent.id, repo, branch, source: originalEvent.source });
+            send({ type: "event_queued", index: i, newEventId: tempEvent.id, repo, branch, source: originalEvent.source, commitCount, jiraKeys });
           } catch (err) {
             send({ type: "event_error", index: i, repo, branch, message: String(err) });
           }
@@ -162,6 +167,7 @@ export async function POST(
           newEventIds,
           existingContent: existingUpdate?.content ?? null,
           existingUpdateId: existingUpdate?.id ?? null,
+          originalWeekEvents,
           isoWeek,
           year,
         });

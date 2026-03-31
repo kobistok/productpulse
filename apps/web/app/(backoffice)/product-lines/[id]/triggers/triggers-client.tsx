@@ -158,11 +158,6 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
     setRunResult(res.ok ? "queued" : "error");
     setRunning(false);
     setTimeout(() => setRunResult(null), 3000);
-    // Refresh events after a short delay to include the new entry
-    setTimeout(async () => {
-      const evRes = await fetch(eventsUrl());
-      if (evRes.ok) setEvents(await evRes.json());
-    }, 1500);
   }
 
   async function copyText(text: string, key: string) {
@@ -357,6 +352,17 @@ type BatchEventProgress = {
   queuedStatus: "pending" | "queued" | "error";
   agentDecision?: string | null;
   updateContent?: string | null;
+  commitCount?: number;
+  jiraKeys?: string[];
+};
+
+type OriginalWeekEvent = {
+  id: string;
+  repo: string | null;
+  branch: string | null;
+  source: string;
+  agentDecision: string | null;
+  workerDetail: string | null;
 };
 
 type BatchSection = {
@@ -366,15 +372,18 @@ type BatchSection = {
   existingRaw?: string;
   checked: boolean;
   mode: "override" | "combine";
+  missedReason?: string | null;
 };
 
 type BatchRerunState = {
   isoWeek: number;
   year: number;
-  phase: "streaming" | "polling" | "comparing" | "applying" | "done";
+  phase: "streaming" | "polling" | "comparing" | "applying" | "done" | "error";
+  errorMessage?: string;
   eventProgress: BatchEventProgress[];
   existingContent: string | null;
   existingUpdateId: string | null;
+  originalWeekEvents: OriginalWeekEvent[];
   sections: BatchSection[];
 };
 
@@ -389,7 +398,11 @@ function extractHeadlineFromRaw(raw: string): string {
   return m ? m[1] : firstLine;
 }
 
-function computeBatchSections(existingContent: string | null, eventProgress: BatchEventProgress[]): BatchSection[] {
+function computeBatchSections(
+  existingContent: string | null,
+  eventProgress: BatchEventProgress[],
+  originalWeekEvents: OriginalWeekEvent[]
+): BatchSection[] {
   const existingRaws = existingContent
     ? existingContent.split(/\n\n---\n\n|\n---\n/).map((s) => s.trim()).filter(Boolean)
     : [];
@@ -406,15 +419,29 @@ function computeBatchSections(existingContent: string | null, eventProgress: Bat
     }
   }
 
+  // Build a summary of why the original run didn't include content
+  const skipReasons = originalWeekEvents
+    .filter((ev) => ev.agentDecision !== "update_created" && ev.workerDetail)
+    .map((ev) => {
+      const reason = ev.workerDetail?.match(/Agent:\s*(.+?)(?:\s*·|$)/)?.[1]?.trim();
+      return reason ?? null;
+    })
+    .filter(Boolean) as string[];
+
+  const missedReason = skipReasons.length > 0
+    ? skipReasons.join(" · ")
+    : originalWeekEvents.length === 0
+    ? "No agent run found for this week"
+    : null;
+
   const sections: BatchSection[] = [];
   for (const [headline, proposedRaw] of proposedByHeadline) {
     const existingRaw = existingByHeadline.get(headline);
     if (!existingRaw) {
-      sections.push({ proposedRaw, headline, status: "new", checked: true, mode: "override" });
+      sections.push({ proposedRaw, headline, status: "new", checked: true, mode: "override", missedReason });
     } else if (stripTsComment(proposedRaw).trim() !== stripTsComment(existingRaw).trim()) {
-      sections.push({ proposedRaw, headline, status: "changed", existingRaw, checked: true, mode: "override" });
+      sections.push({ proposedRaw, headline, status: "changed", existingRaw, checked: true, mode: "override", missedReason });
     }
-    // unchanged sections are skipped — no action needed
   }
   return sections;
 }
@@ -504,7 +531,7 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
                 if (allResolved) {
                   clearInterval(batchPollRef.current!);
                   batchPollRef.current = null;
-                  const sections = computeBatchSections(r.existingContent, updated);
+                  const sections = computeBatchSections(r.existingContent, updated, r.originalWeekEvents);
                   return { ...r, eventProgress: updated, phase: "comparing", sections };
                 }
                 return { ...r, eventProgress: updated };
@@ -613,7 +640,7 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
 
   async function handleBatchRerun(isoWeek: number, year: number) {
     setShowWeekPicker(false);
-    setBatchRerun({ isoWeek, year, phase: "streaming", eventProgress: [], existingContent: null, existingUpdateId: null, sections: [] });
+    setBatchRerun({ isoWeek, year, phase: "streaming", eventProgress: [], existingContent: null, existingUpdateId: null, originalWeekEvents: [], sections: [] });
 
     const res = await fetch(`/api/product-lines/${productLineId}/batch-rerun`, {
       method: "POST",
@@ -621,7 +648,10 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
       body: JSON.stringify({ isoWeek, year }),
     });
 
-    if (!res.ok || !res.body) { setBatchRerun(null); return; }
+    if (!res.ok || !res.body) {
+      setBatchRerun((r) => r ? { ...r, phase: "error", errorMessage: "Failed to connect to server" } : null);
+      return;
+    }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -640,9 +670,9 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
           const msg = JSON.parse(line) as {
             type: string;
             index?: number; total?: number; repo?: string; branch?: string; source?: string;
-            newEventId?: string; message?: string;
+            newEventId?: string; message?: string; commitCount?: number; jiraKeys?: string[];
             newEventIds?: string[]; existingContent?: string | null; existingUpdateId?: string | null;
-            isoWeek?: number; year?: number;
+            originalWeekEvents?: OriginalWeekEvent[]; isoWeek?: number; year?: number;
           };
 
           if (msg.type === "event_start" && msg.index != null) {
@@ -656,7 +686,9 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
             setBatchRerun((r) => {
               if (!r) return null;
               const updated = r.eventProgress.map((ep) =>
-                ep.index === msg.index ? { ...ep, newEventId: msg.newEventId, queuedStatus: "queued" as const } : ep
+                ep.index === msg.index
+                  ? { ...ep, newEventId: msg.newEventId, queuedStatus: "queued" as const, commitCount: msg.commitCount, jiraKeys: msg.jiraKeys }
+                  : ep
               );
               return { ...r, eventProgress: updated };
             });
@@ -674,9 +706,10 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
               phase: "polling",
               existingContent: msg.existingContent ?? null,
               existingUpdateId: msg.existingUpdateId ?? null,
+              originalWeekEvents: (msg.originalWeekEvents as OriginalWeekEvent[]) ?? [],
             } : null);
           } else if (msg.type === "error") {
-            setBatchRerun(null);
+            setBatchRerun((r) => r ? { ...r, phase: "error", errorMessage: msg.message ?? "Something went wrong" } : null);
           }
         } catch { /* ignore */ }
       }
@@ -1088,6 +1121,7 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
                   : batchRerun.phase === "polling" ? "Agent running…"
                   : batchRerun.phase === "comparing" ? "Review changes"
                   : batchRerun.phase === "applying" ? "Saving…"
+                  : batchRerun.phase === "error" ? "Error"
                   : "Applied!"}
               </p>
               <p className="text-xs text-zinc-500 mt-0.5">W{batchRerun.isoWeek} · {batchRerun.year}</p>
@@ -1104,19 +1138,30 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
             {(batchRerun.phase === "streaming" || batchRerun.phase === "polling") && (
               <ul className="space-y-2">
                 {batchRerun.eventProgress.map((ep, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs">
-                    {ep.queuedStatus === "error" ? (
-                      <X size={12} className="text-red-500 shrink-0" />
-                    ) : ep.agentDecision ? (
-                      <Check size={12} className="text-green-500 shrink-0" />
-                    ) : ep.queuedStatus === "queued" ? (
-                      <RefreshCw size={12} className="animate-spin text-zinc-400 shrink-0" />
-                    ) : (
-                      <RefreshCw size={12} className="text-zinc-200 shrink-0" />
-                    )}
-                    <span className="font-mono text-zinc-500">{ep.repo}</span>
-                    {ep.branch && <><span className="text-zinc-300">·</span><span className="font-mono text-zinc-400">{ep.branch}</span></>}
-                    <span className="ml-auto text-zinc-400">
+                  <li key={i} className="flex items-start gap-2 text-xs">
+                    <span className="mt-0.5 shrink-0">
+                      {ep.queuedStatus === "error" ? (
+                        <X size={12} className="text-red-500" />
+                      ) : ep.agentDecision ? (
+                        <Check size={12} className="text-green-500" />
+                      ) : ep.queuedStatus === "queued" ? (
+                        <RefreshCw size={12} className="animate-spin text-zinc-400" />
+                      ) : (
+                        <RefreshCw size={12} className="text-zinc-200" />
+                      )}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-mono text-zinc-600">{ep.repo}</span>
+                      {ep.branch && <span className="text-zinc-400"> · {ep.branch}</span>}
+                      {(ep.commitCount != null || (ep.jiraKeys && ep.jiraKeys.length > 0)) && (
+                        <span className="text-zinc-400 ml-1.5">
+                          {ep.commitCount != null && ep.commitCount > 0 && `${ep.commitCount} commit${ep.commitCount !== 1 ? "s" : ""}`}
+                          {ep.commitCount != null && ep.commitCount > 0 && ep.jiraKeys && ep.jiraKeys.length > 0 && " · "}
+                          {ep.jiraKeys && ep.jiraKeys.length > 0 && ep.jiraKeys.join(", ")}
+                        </span>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-zinc-400">
                       {ep.queuedStatus === "error" ? "Error" :
                        ep.agentDecision === "update_created" ? "Update created" :
                        ep.agentDecision ? "No update" :
@@ -1192,6 +1237,12 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
                         {/* Content preview */}
                         {section.checked && (
                           <div className="px-4 py-3 space-y-2">
+                            {section.missedReason && (
+                              <div className="bg-amber-50 border border-amber-100 rounded px-2.5 py-1.5">
+                                <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Why missed in original run</p>
+                                <p className="text-xs text-amber-800">{section.missedReason}</p>
+                              </div>
+                            )}
                             {section.status === "changed" && section.existingRaw && (
                               <div>
                                 <p className="text-[10px] font-semibold text-zinc-400 uppercase mb-1">Current</p>
@@ -1229,6 +1280,17 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
                 <Check size={28} className="text-green-500" />
                 <p className="text-sm font-semibold text-zinc-900">Changes applied!</p>
                 <p className="text-xs text-zinc-400">W{batchRerun.isoWeek} · {batchRerun.year} updated</p>
+              </div>
+            )}
+
+            {/* Error */}
+            {batchRerun.phase === "error" && (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <div className="rounded-full bg-red-50 p-3">
+                  <X size={20} className="text-red-500" />
+                </div>
+                <p className="text-sm font-semibold text-zinc-900">{batchRerun.errorMessage ?? "Something went wrong"}</p>
+                <Button size="sm" variant="outline" onClick={() => setBatchRerun(null)}>Dismiss</Button>
               </div>
             )}
           </div>
