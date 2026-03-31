@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Fragment } from "react";
+import React, { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap, RefreshCw, X, Telescope } from "lucide-react";
+import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Play, Zap, RefreshCw, X, Telescope, ListRestart } from "lucide-react";
 import type { StoredAgentInput } from "@/lib/cloud-tasks";
 import type { GitTrigger } from "@productpulse/db";
 import type { TriggerEventWithTrigger } from "./page";
+import { getISOWeek, getISOWeekYear } from "date-fns";
 
 interface Props {
   productLineId: string;
@@ -332,6 +333,78 @@ type RerunState = {
   agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> } | null;
 };
 
+type BatchEventProgress = {
+  index: number;
+  total: number;
+  repo: string;
+  branch: string;
+  source: string;
+  newEventId?: string;
+  queuedStatus: "pending" | "queued" | "error";
+  agentDecision?: string | null;
+  updateContent?: string | null;
+};
+
+type BatchSection = {
+  proposedRaw: string;
+  headline: string;
+  status: "new" | "changed";
+  existingRaw?: string;
+  checked: boolean;
+  mode: "override" | "combine";
+};
+
+type BatchRerunState = {
+  isoWeek: number;
+  year: number;
+  phase: "streaming" | "polling" | "comparing" | "applying" | "done";
+  eventProgress: BatchEventProgress[];
+  existingContent: string | null;
+  existingUpdateId: string | null;
+  sections: BatchSection[];
+};
+
+function stripTsComment(raw: string): string {
+  return raw.replace(/^<!--\s*ts:[^\s>]+\s*-->\n?/, "").trimStart();
+}
+
+function extractHeadlineFromRaw(raw: string): string {
+  const stripped = stripTsComment(raw);
+  const firstLine = stripped.split("\n").find(Boolean) ?? "";
+  const m = firstLine.match(/^\*\*(.+)\*\*$/);
+  return m ? m[1] : firstLine;
+}
+
+function computeBatchSections(existingContent: string | null, eventProgress: BatchEventProgress[]): BatchSection[] {
+  const existingRaws = existingContent
+    ? existingContent.split(/\n\n---\n\n|\n---\n/).map((s) => s.trim()).filter(Boolean)
+    : [];
+  const existingByHeadline = new Map<string, string>();
+  for (const raw of existingRaws) existingByHeadline.set(extractHeadlineFromRaw(raw), raw);
+
+  // Collect all proposed sections (last one per headline wins)
+  const proposedByHeadline = new Map<string, string>();
+  for (const ep of eventProgress) {
+    if (ep.agentDecision === "update_created" && ep.updateContent) {
+      for (const raw of ep.updateContent.split(/\n\n---\n\n|\n---\n/).map((s) => s.trim()).filter(Boolean)) {
+        proposedByHeadline.set(extractHeadlineFromRaw(raw), raw);
+      }
+    }
+  }
+
+  const sections: BatchSection[] = [];
+  for (const [headline, proposedRaw] of proposedByHeadline) {
+    const existingRaw = existingByHeadline.get(headline);
+    if (!existingRaw) {
+      sections.push({ proposedRaw, headline, status: "new", checked: true, mode: "override" });
+    } else if (stripTsComment(proposedRaw).trim() !== stripTsComment(existingRaw).trim()) {
+      sections.push({ proposedRaw, headline, status: "changed", existingRaw, checked: true, mode: "override" });
+    }
+    // unchanged sections are skipped — no action needed
+  }
+  return sections;
+}
+
 function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null; agentConfig: { filterRule: string | null; productContext: string | null } | null }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
@@ -340,8 +413,33 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [rerun, setRerun] = useState<RerunState | null>(null);
   const [exploreEvent, setExploreEvent] = useState<TriggerEventWithTrigger | null>(null);
+  const [batchRerun, setBatchRerun] = useState<BatchRerunState | null>(null);
+  const [showWeekPicker, setShowWeekPicker] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const batchRerunRef = useRef<BatchRerunState | null>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep ref in sync for polling interval
+  useEffect(() => { batchRerunRef.current = batchRerun; }, [batchRerun]);
+
+  // Derive available weeks from event list (newest first, up to 8)
+  const availableWeeks = useMemo(() => {
+    const seen = new Set<string>();
+    const weeks: { isoWeek: number; year: number }[] = [];
+    for (const ev of events) {
+      const d = new Date(ev.createdAt as unknown as string);
+      const isoWeek = getISOWeek(d);
+      const year = getISOWeekYear(d);
+      const key = `${year}-${isoWeek}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        weeks.push({ isoWeek, year });
+      }
+      if (weeks.length >= 8) break;
+    }
+    return weeks;
+  }, [events]);
 
   // Poll for re-run result
   useEffect(() => {
@@ -363,6 +461,57 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
     }, 2000);
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [rerun, productLineId]);
+
+  // Batch rerun polling
+  useEffect(() => {
+    if (!batchRerun || batchRerun.phase !== "polling") {
+      if (batchPollRef.current) { clearInterval(batchPollRef.current); batchPollRef.current = null; }
+      return;
+    }
+    if (batchPollRef.current) return;
+
+    batchPollRef.current = setInterval(async () => {
+      const current = batchRerunRef.current;
+      if (!current || current.phase !== "polling") return;
+
+      const pending = current.eventProgress.filter(
+        (p) => p.newEventId && p.queuedStatus === "queued" && !p.agentDecision
+      );
+
+      await Promise.all(
+        pending.map(async (p) => {
+          if (!p.newEventId) return;
+          try {
+            const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${p.newEventId}`);
+            if (!res.ok) return;
+            const ev = await res.json();
+            if (ev.agentDecision) {
+              setBatchRerun((r) => {
+                if (!r) return null;
+                const updated = r.eventProgress.map((ep) =>
+                  ep.newEventId === p.newEventId
+                    ? { ...ep, agentDecision: ev.agentDecision, updateContent: ev.updateContent ?? null }
+                    : ep
+                );
+                const allResolved = updated
+                  .filter((ep) => ep.queuedStatus === "queued")
+                  .every((ep) => ep.agentDecision != null);
+                if (allResolved) {
+                  clearInterval(batchPollRef.current!);
+                  batchPollRef.current = null;
+                  const sections = computeBatchSections(r.existingContent, updated);
+                  return { ...r, eventProgress: updated, phase: "comparing", sections };
+                }
+                return { ...r, eventProgress: updated };
+              });
+            }
+          } catch { /* ignore */ }
+        })
+      );
+    }, 2000);
+
+    return () => { if (batchPollRef.current) { clearInterval(batchPollRef.current); batchPollRef.current = null; } };
+  }, [batchRerun?.phase, productLineId]);
 
   // Debounced server search
   useEffect(() => {
@@ -454,6 +603,132 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
       ));
       setRerun((r) => r ? { ...r, status: "approved" } : null);
       setTimeout(() => setRerun(null), 3000);
+    }
+  }
+
+  async function handleBatchRerun(isoWeek: number, year: number) {
+    setShowWeekPicker(false);
+    setBatchRerun({ isoWeek, year, phase: "streaming", eventProgress: [], existingContent: null, existingUpdateId: null, sections: [] });
+
+    const res = await fetch(`/api/product-lines/${productLineId}/batch-rerun`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isoWeek, year }),
+    });
+
+    if (!res.ok || !res.body) { setBatchRerun(null); return; }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line) as {
+            type: string;
+            index?: number; total?: number; repo?: string; branch?: string; source?: string;
+            newEventId?: string; message?: string;
+            newEventIds?: string[]; existingContent?: string | null; existingUpdateId?: string | null;
+            isoWeek?: number; year?: number;
+          };
+
+          if (msg.type === "event_start" && msg.index != null) {
+            const ep: BatchEventProgress = {
+              index: msg.index, total: msg.total ?? 1,
+              repo: msg.repo ?? "", branch: msg.branch ?? "", source: msg.source ?? "manual",
+              queuedStatus: "pending",
+            };
+            setBatchRerun((r) => r ? { ...r, eventProgress: [...r.eventProgress, ep] } : null);
+          } else if (msg.type === "event_queued" && msg.index != null) {
+            setBatchRerun((r) => {
+              if (!r) return null;
+              const updated = r.eventProgress.map((ep) =>
+                ep.index === msg.index ? { ...ep, newEventId: msg.newEventId, queuedStatus: "queued" as const } : ep
+              );
+              return { ...r, eventProgress: updated };
+            });
+          } else if (msg.type === "event_error" && msg.index != null) {
+            setBatchRerun((r) => {
+              if (!r) return null;
+              const updated = r.eventProgress.map((ep) =>
+                ep.index === msg.index ? { ...ep, queuedStatus: "error" as const } : ep
+              );
+              return { ...r, eventProgress: updated };
+            });
+          } else if (msg.type === "complete") {
+            setBatchRerun((r) => r ? {
+              ...r,
+              phase: "polling",
+              existingContent: msg.existingContent ?? null,
+              existingUpdateId: msg.existingUpdateId ?? null,
+            } : null);
+          } else if (msg.type === "error") {
+            setBatchRerun(null);
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
+  async function handleApplyBatch() {
+    if (!batchRerun) return;
+    setBatchRerun((r) => r ? { ...r, phase: "applying" } : null);
+
+    const { existingContent, existingUpdateId, sections, isoWeek, year } = batchRerun;
+
+    function extractHeadline(raw: string): string {
+      const stripped = raw.replace(/^<!--\s*ts:[^\s>]+\s*-->\n?/, "").trimStart();
+      const firstLine = stripped.split("\n").find(Boolean) ?? "";
+      const m = firstLine.match(/^\*\*(.+)\*\*$/);
+      return m ? m[1] : firstLine;
+    }
+
+    const existingRaws = existingContent
+      ? existingContent.split(/\n\n---\n\n|\n---\n/).map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    const result: string[] = [...existingRaws];
+
+    for (const section of sections) {
+      if (!section.checked) continue;
+      if (section.status === "new") {
+        result.push(section.proposedRaw);
+      } else if (section.status === "changed") {
+        const idx = result.findIndex((r) => extractHeadline(r) === section.headline);
+        if (idx >= 0) {
+          result[idx] = section.mode === "override"
+            ? section.proposedRaw
+            : result[idx] + "\n\n" + section.proposedRaw;
+        } else {
+          result.push(section.proposedRaw);
+        }
+      }
+    }
+
+    const newContent = result.join("\n\n---\n\n");
+
+    const url = existingUpdateId
+      ? `/api/product-lines/${productLineId}/updates/${existingUpdateId}`
+      : `/api/product-lines/${productLineId}/updates`;
+    const method = existingUpdateId ? "PATCH" : "POST";
+    const body = existingUpdateId
+      ? JSON.stringify({ content: newContent })
+      : JSON.stringify({ isoWeek, year, content: newContent });
+
+    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body });
+    if (res.ok) {
+      setBatchRerun((r) => r ? { ...r, phase: "done" } : null);
+      setTimeout(() => setBatchRerun(null), 2500);
+    } else {
+      setBatchRerun((r) => r ? { ...r, phase: "comparing" } : null);
     }
   }
 
@@ -624,6 +899,31 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
               <RefreshCw size={10} className="animate-spin" /> Re-running…
             </span>
           )}
+          {availableWeeks.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowWeekPicker((v) => !v)}
+                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 border border-zinc-200 rounded-md px-2 py-1 transition-colors"
+                title="Re-run all events for a week"
+              >
+                <ListRestart size={11} />
+                Re-run week
+              </button>
+              {showWeekPicker && (
+                <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-zinc-200 rounded-lg shadow-lg py-1 min-w-[140px]">
+                  {availableWeeks.map(({ isoWeek, year }) => (
+                    <button
+                      key={`${year}-${isoWeek}`}
+                      onClick={() => handleBatchRerun(isoWeek, year)}
+                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      W{isoWeek} · {year}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="relative flex-1">
           <input
@@ -761,6 +1061,185 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
         </table>
       </div>
     </div>
+
+    {/* ── Batch re-run modal ─────────────────────────────────────────────── */}
+    {batchRerun && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">
+                {batchRerun.phase === "streaming" ? "Queueing runs…"
+                  : batchRerun.phase === "polling" ? "Agent running…"
+                  : batchRerun.phase === "comparing" ? "Review changes"
+                  : batchRerun.phase === "applying" ? "Saving…"
+                  : "Applied!"}
+              </p>
+              <p className="text-xs text-zinc-500 mt-0.5">W{batchRerun.isoWeek} · {batchRerun.year}</p>
+            </div>
+            {batchRerun.phase !== "applying" && (
+              <button onClick={() => setBatchRerun(null)} className="text-zinc-400 hover:text-zinc-700 transition-colors">
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+            {/* Event progress list (streaming + polling phases) */}
+            {(batchRerun.phase === "streaming" || batchRerun.phase === "polling") && (
+              <ul className="space-y-2">
+                {batchRerun.eventProgress.map((ep, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs">
+                    {ep.queuedStatus === "error" ? (
+                      <X size={12} className="text-red-500 shrink-0" />
+                    ) : ep.agentDecision ? (
+                      <Check size={12} className="text-green-500 shrink-0" />
+                    ) : ep.queuedStatus === "queued" ? (
+                      <RefreshCw size={12} className="animate-spin text-zinc-400 shrink-0" />
+                    ) : (
+                      <RefreshCw size={12} className="text-zinc-200 shrink-0" />
+                    )}
+                    <span className="font-mono text-zinc-500">{ep.repo}</span>
+                    {ep.branch && <><span className="text-zinc-300">·</span><span className="font-mono text-zinc-400">{ep.branch}</span></>}
+                    <span className="ml-auto text-zinc-400">
+                      {ep.queuedStatus === "error" ? "Error" :
+                       ep.agentDecision === "update_created" ? "Update created" :
+                       ep.agentDecision ? "No update" :
+                       ep.queuedStatus === "queued" ? "Running…" : "Queuing…"}
+                    </span>
+                  </li>
+                ))}
+                {batchRerun.phase === "polling" && batchRerun.eventProgress.every(ep => ep.agentDecision) && (
+                  <li className="flex items-center gap-2 text-xs text-zinc-400">
+                    <RefreshCw size={12} className="animate-spin shrink-0" /> Computing comparison…
+                  </li>
+                )}
+              </ul>
+            )}
+
+            {/* Comparison phase */}
+            {batchRerun.phase === "comparing" && (
+              <>
+                {batchRerun.sections.length === 0 ? (
+                  <p className="text-sm text-zinc-500 py-4 text-center">
+                    No changes — the re-run produced identical content.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {batchRerun.sections.map((section, i) => (
+                      <div key={i} className={`border rounded-lg overflow-hidden ${section.checked ? "border-zinc-200" : "border-zinc-100 opacity-60"}`}>
+                        {/* Section header */}
+                        <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-50 border-b border-zinc-100">
+                          <input
+                            type="checkbox"
+                            checked={section.checked}
+                            onChange={() => setBatchRerun((r) => {
+                              if (!r) return null;
+                              const updated = r.sections.map((s, j) => j === i ? { ...s, checked: !s.checked } : s);
+                              return { ...r, sections: updated };
+                            })}
+                            className="shrink-0"
+                          />
+                          <span className="text-xs font-medium text-zinc-800 flex-1">{section.headline}</span>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                            section.status === "new"
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}>
+                            {section.status === "new" ? "New" : "Changed"}
+                          </span>
+                          {section.status === "changed" && section.checked && (
+                            <div className="flex items-center gap-0.5 bg-zinc-200 rounded-md p-0.5">
+                              <button
+                                onClick={() => setBatchRerun((r) => {
+                                  if (!r) return null;
+                                  const updated = r.sections.map((s, j) => j === i ? { ...s, mode: "override" as const } : s);
+                                  return { ...r, sections: updated };
+                                })}
+                                className={`text-[10px] px-2 py-0.5 rounded transition-colors ${section.mode === "override" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500"}`}
+                              >
+                                Override
+                              </button>
+                              <button
+                                onClick={() => setBatchRerun((r) => {
+                                  if (!r) return null;
+                                  const updated = r.sections.map((s, j) => j === i ? { ...s, mode: "combine" as const } : s);
+                                  return { ...r, sections: updated };
+                                })}
+                                className={`text-[10px] px-2 py-0.5 rounded transition-colors ${section.mode === "combine" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500"}`}
+                              >
+                                Combine
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content preview */}
+                        {section.checked && (
+                          <div className="px-4 py-3 space-y-2">
+                            {section.status === "changed" && section.existingRaw && (
+                              <div>
+                                <p className="text-[10px] font-semibold text-zinc-400 uppercase mb-1">Current</p>
+                                <pre className="whitespace-pre-wrap text-xs text-zinc-500 font-sans bg-zinc-50 rounded px-2 py-1.5 line-through decoration-zinc-300">
+                                  {stripTsComment(section.existingRaw)}
+                                </pre>
+                              </div>
+                            )}
+                            <div>
+                              {section.status === "changed" && <p className="text-[10px] font-semibold text-zinc-400 uppercase mb-1">Proposed</p>}
+                              <pre className="whitespace-pre-wrap text-xs text-zinc-700 font-sans bg-green-50 rounded px-2 py-1.5">
+                                {stripTsComment(section.proposedRaw)}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Applying */}
+            {batchRerun.phase === "applying" && (
+              <div className="flex items-center justify-center py-8 gap-2 text-zinc-400">
+                <RefreshCw size={14} className="animate-spin" />
+                <span className="text-sm">Saving…</span>
+              </div>
+            )}
+
+            {/* Done */}
+            {batchRerun.phase === "done" && (
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
+                <Check size={28} className="text-green-500" />
+                <p className="text-sm font-semibold text-zinc-900">Changes applied!</p>
+                <p className="text-xs text-zinc-400">W{batchRerun.isoWeek} · {batchRerun.year} updated</p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          {batchRerun.phase === "comparing" && batchRerun.sections.length > 0 && (
+            <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-zinc-100 shrink-0">
+              <p className="text-xs text-zinc-400">
+                {batchRerun.sections.filter(s => s.checked).length} of {batchRerun.sections.length} change{batchRerun.sections.length !== 1 ? "s" : ""} selected
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setBatchRerun(null)}>Cancel</Button>
+                <Button
+                  size="sm"
+                  onClick={handleApplyBatch}
+                  disabled={batchRerun.sections.every(s => !s.checked)}
+                >
+                  Apply selected
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
 
     {/* ── Explore modal ──────────────────────────────────────────────────── */}
     {exploreEvent && (
