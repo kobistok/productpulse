@@ -8,13 +8,21 @@ import { fetchJiraFieldMap, fetchJiraTicketsByKeys, type JiraConfig } from "@/li
 const JIRA_KEY_RE = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; eventId: string }> }
 ) {
   const user = await requireSession();
   const { id: productLineId, eventId } = await params;
   const orgId = user.memberships[0]?.orgId;
   if (!orgId) return new Response(JSON.stringify({ error: "No organization" }), { status: 400 });
+
+  let agentConfigOverride: { filterRule?: string | null; productContext?: string | null } | undefined;
+  try {
+    const body = await req.json();
+    if (body?.filterRule !== undefined || body?.productContext !== undefined) {
+      agentConfigOverride = { filterRule: body.filterRule ?? null, productContext: body.productContext ?? null };
+    }
+  } catch { /* no body */ }
 
   const encoder = new TextEncoder();
 
@@ -191,6 +199,7 @@ export async function POST(
             targetYear,
             manualRun: true,
             agentInputOverride,
+            ...(agentConfigOverride ? { agentConfigOverride } : {}),
           });
           send({ type: "step", label: "Queueing agent job", status: "done" });
         } catch (err) {

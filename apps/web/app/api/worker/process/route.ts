@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   const job = await request.json();
-  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun, manualRun, agentInputOverride } = job as { orgId: string; productLineId: string; triggerEventId?: string; payload: unknown; targetIsoWeek?: number; targetYear?: number; forceRun?: boolean; manualRun?: boolean; agentInputOverride?: StoredAgentInput };
+  const { orgId, productLineId, triggerEventId, payload, targetIsoWeek, targetYear, forceRun, manualRun, agentInputOverride, agentConfigOverride } = job as { orgId: string; productLineId: string; triggerEventId?: string; payload: unknown; targetIsoWeek?: number; targetYear?: number; forceRun?: boolean; manualRun?: boolean; agentInputOverride?: StoredAgentInput; agentConfigOverride?: { filterRule?: string | null; productContext?: string | null } };
   console.log("[worker] job:", JSON.stringify({ orgId, productLineId, triggerEventId, targetIsoWeek, targetYear }));
 
   const productLines = await prisma.productLine.findMany({
@@ -154,8 +154,8 @@ export async function POST(request: NextRequest) {
         id: pl.id,
         name: pl.name,
         description: pl.description,
-        productContext: pl.agent!.productContext ?? null,
-        filterRule: pl.agent!.filterRule ?? null,
+        productContext: (agentConfigOverride && pl.id === productLineId ? agentConfigOverride.productContext : undefined) ?? pl.agent!.productContext ?? null,
+        filterRule: (agentConfigOverride && pl.id === productLineId ? agentConfigOverride.filterRule : undefined) ?? pl.agent!.filterRule ?? null,
         currentWeekContent: currentWeekUpdate?.content ?? null,
         recentUpdates: previousUpdates.map((u) => ({
           content: u.content,

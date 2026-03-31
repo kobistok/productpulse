@@ -336,7 +336,9 @@ type RerunState = {
   newEventId: string | null;
   targetIsoWeek: number | null;
   targetYear: number | null;
-  status: "preparing" | "polling" | "ready" | "approving" | "approved";
+  status: "configuring" | "preparing" | "polling" | "ready" | "approving" | "approved";
+  filterRuleOverride: string;
+  productContextOverride: string;
   steps: RerunStep[];
   result: TriggerEventWithTrigger | null;
   agentInput: { repo: string; branch: string; commits: Array<{ sha: string; message: string; author: string }>; jiraTickets: Array<{ key: string; summary: string; status: string; type: string }> } | null;
@@ -564,11 +566,35 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
     return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
   }, [search, productLineId]);
 
-  async function handleRerun(eventId: string) {
-    // Open modal immediately so the user sees progress right away
-    setRerun({ originalEventId: eventId, newEventId: null, targetIsoWeek: null, targetYear: null, status: "preparing", steps: [], result: null, agentInput: null });
+  function handleRerun(eventId: string) {
+    setRerun({
+      originalEventId: eventId,
+      newEventId: null,
+      targetIsoWeek: null,
+      targetYear: null,
+      status: "configuring",
+      filterRuleOverride: agentConfig?.filterRule ?? "",
+      productContextOverride: agentConfig?.productContext ?? "",
+      steps: [],
+      result: null,
+      agentInput: null,
+    });
+  }
 
-    const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${eventId}/rerun`, { method: "POST" });
+  async function startRerun() {
+    if (!rerun) return;
+    const { originalEventId, filterRuleOverride, productContextOverride } = rerun;
+    setRerun((r) => r ? { ...r, status: "preparing" } : null);
+
+    const body: Record<string, string | null | undefined> = {};
+    if (filterRuleOverride !== (agentConfig?.filterRule ?? "")) body.filterRule = filterRuleOverride || null;
+    if (productContextOverride !== (agentConfig?.productContext ?? "")) body.productContext = productContextOverride || null;
+
+    const res = await fetch(`/api/product-lines/${productLineId}/trigger-events/${originalEventId}/rerun`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     if (!res.ok || !res.body) {
       setRerun(null);
       return;
@@ -805,14 +831,13 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
 
   return (
     <>
-    {/* Re-run modal — shown during polling and after */}
     {rerun && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
             <div>
               <p className="text-sm font-semibold text-zinc-900">
-                {rerun.status === "preparing" ? "Preparing re-run…" : rerun.status === "polling" ? "Running agent…" : "Re-run result"}
+                {rerun.status === "configuring" ? "Re-run" : rerun.status === "preparing" ? "Preparing re-run…" : rerun.status === "polling" ? "Running agent…" : "Re-run result"}
               </p>
               {rerun.targetIsoWeek && (
                 <p className="text-xs text-zinc-500 mt-0.5">Week {rerun.targetIsoWeek} · {rerun.targetYear}</p>
@@ -887,7 +912,31 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
           )}
 
           <div className="px-6 py-5 overflow-y-auto flex-1">
-            {rerun.status === "preparing" ? (
+            {rerun.status === "configuring" ? (
+              <div className="space-y-4">
+                <p className="text-xs text-zinc-500">Optionally edit the prompt before running. Changes apply to this run only — they won&apos;t be saved.</p>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-700">Filter rule</label>
+                  <textarea
+                    value={rerun.filterRuleOverride}
+                    onChange={(e) => setRerun((r) => r ? { ...r, filterRuleOverride: e.target.value } : null)}
+                    rows={3}
+                    className="w-full text-xs border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-300 resize-y font-mono"
+                    placeholder="e.g. Only include changes related to the payment flow"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-700">Product context</label>
+                  <textarea
+                    value={rerun.productContextOverride}
+                    onChange={(e) => setRerun((r) => r ? { ...r, productContextOverride: e.target.value } : null)}
+                    rows={5}
+                    className="w-full text-xs border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-300 resize-y"
+                    placeholder="Describe the product, its users, and what matters to them…"
+                  />
+                </div>
+              </div>
+            ) : rerun.status === "preparing" ? (
               <div className="flex items-center justify-center py-6 gap-2 text-zinc-400">
                 <RefreshCw size={14} className="animate-spin" />
                 <span className="text-sm">Preparing…</span>
@@ -916,6 +965,12 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
               </div>
             )}
           </div>
+          {rerun.status === "configuring" && (
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-zinc-100 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setRerun(null)}>Cancel</Button>
+              <Button size="sm" onClick={startRerun}>Run</Button>
+            </div>
+          )}
           {rerun.result?.agentDecision === "update_created" && rerun.status !== "approved" && (
             <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-zinc-100 shrink-0">
               <Button size="sm" variant="outline" onClick={() => setRerun(null)}>Cancel</Button>
@@ -963,26 +1018,12 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
             </div>
           )}
         </div>
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search full history by Jira ticket, repo, branch…"
-            className="w-full text-xs border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-300 placeholder:text-zinc-400"
-          />
-          {searching && (
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <RefreshCw size={10} className="animate-spin text-zinc-400" />
-            </span>
-          )}
-        </div>
         <div className="flex items-center gap-3 shrink-0">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <div
-              onClick={() => setShowManual((v) => !v)}
-              className={`relative w-7 h-4 rounded-full transition-colors ${showManual ? "bg-zinc-700" : "bg-zinc-200"}`}
-            >
+          <label
+            className="flex items-center gap-1.5 cursor-pointer select-none"
+            onClick={() => setShowManual((v) => !v)}
+          >
+            <div className={`relative w-7 h-4 rounded-full transition-colors ${showManual ? "bg-zinc-700" : "bg-zinc-200"}`}>
               <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${showManual ? "translate-x-3.5" : "translate-x-0.5"}`} />
             </div>
             <span className="text-[11px] text-zinc-500">Manual runs</span>
@@ -1008,6 +1049,20 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, sh
             );
           })}
         </div>
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search full history by Jira ticket, repo, branch…"
+          className="w-full text-xs border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-300 placeholder:text-zinc-400"
+        />
+        {searching && (
+          <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+            <RefreshCw size={10} className="animate-spin text-zinc-400" />
+          </span>
+        )}
       </div>
       <div className="border border-zinc-200 rounded-xl overflow-hidden">
         <table className="w-full text-xs table-fixed">

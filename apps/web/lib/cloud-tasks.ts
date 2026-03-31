@@ -28,6 +28,7 @@ export interface AgentJob {
   forceRun?: boolean;
   manualRun?: boolean;
   agentInputOverride?: StoredAgentInput;
+  agentConfigOverride?: { filterRule?: string | null; productContext?: string | null };
 }
 
 export async function enqueueAgentJob(job: AgentJob): Promise<void> {
