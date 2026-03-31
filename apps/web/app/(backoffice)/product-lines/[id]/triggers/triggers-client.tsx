@@ -7,7 +7,7 @@ import { Copy, Check, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, Chevro
 import type { StoredAgentInput } from "@/lib/cloud-tasks";
 import type { GitTrigger } from "@productpulse/db";
 import type { TriggerEventWithTrigger } from "./page";
-import { getISOWeek, getISOWeekYear } from "date-fns";
+import { getISOWeek, getISOWeekYear, subWeeks } from "date-fns";
 
 interface Props {
   productLineId: string;
@@ -24,15 +24,28 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
   const [events, setEvents] = useState<TriggerEventWithTrigger[]>(initialEvents);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+
+  const eventsUrl = (extra = "") =>
+    `/api/product-lines/${productLineId}/trigger-events${showManual ? "?showManual=true" : ""}${extra}`;
 
   // Fetch enriched events on mount to populate updateContent
   useEffect(() => {
-    fetch(`/api/product-lines/${productLineId}/trigger-events`)
+    fetch(eventsUrl())
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setEvents(data); })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-fetch when showManual changes
+  useEffect(() => {
+    fetch(eventsUrl())
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setEvents(data); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showManual]);
 
   // Poll while any event is queued but has no agent decision yet
   useEffect(() => {
@@ -43,7 +56,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
     }
     if (pollingRef.current) return; // already polling
     pollingRef.current = setInterval(async () => {
-      const res = await fetch(`/api/product-lines/${productLineId}/trigger-events`);
+      const res = await fetch(eventsUrl());
       if (!res.ok) return;
       const fresh: TriggerEventWithTrigger[] = await res.json();
       setEvents(fresh);
@@ -51,7 +64,8 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
       if (!stillPending && pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
     }, 3000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [events, productLineId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, productLineId, showManual]);
   const [copied, setCopied] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -146,7 +160,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
     setTimeout(() => setRunResult(null), 3000);
     // Refresh events after a short delay to include the new entry
     setTimeout(async () => {
-      const evRes = await fetch(`/api/product-lines/${productLineId}/trigger-events`);
+      const evRes = await fetch(eventsUrl());
       if (evRes.ok) setEvents(await evRes.json());
     }, 1500);
   }
@@ -311,7 +325,7 @@ export function TriggersClient({ productLineId, triggers: initial, appUrl, hasAg
       )}
 
       {/* Run log */}
-      <RunLog events={events} setEvents={setEvents} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} agentConfig={agentConfig} />
+      <RunLog events={events} setEvents={setEvents} productLineId={productLineId} jiraBaseUrl={jiraBaseUrl} agentConfig={agentConfig} showManual={showManual} setShowManual={setShowManual} />
     </div>
   );
 }
@@ -405,7 +419,7 @@ function computeBatchSections(existingContent: string | null, eventProgress: Bat
   return sections;
 }
 
-function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null; agentConfig: { filterRule: string | null; productContext: string | null } | null }) {
+function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig, showManual, setShowManual }: { events: TriggerEventWithTrigger[]; setEvents: React.Dispatch<React.SetStateAction<TriggerEventWithTrigger[]>>; productLineId: string; jiraBaseUrl: string | null; agentConfig: { filterRule: string | null; productContext: string | null } | null; showManual: boolean; setShowManual: React.Dispatch<React.SetStateAction<boolean>> }) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<TriggerEventWithTrigger[] | null>(null);
@@ -423,23 +437,14 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
   // Keep ref in sync for polling interval
   useEffect(() => { batchRerunRef.current = batchRerun; }, [batchRerun]);
 
-  // Derive available weeks from event list (newest first, up to 8)
+  // Always show last 4 ISO weeks (this week + 3 prior), regardless of events
   const availableWeeks = useMemo(() => {
-    const seen = new Set<string>();
-    const weeks: { isoWeek: number; year: number }[] = [];
-    for (const ev of events) {
-      const d = new Date(ev.createdAt as unknown as string);
-      const isoWeek = getISOWeek(d);
-      const year = getISOWeekYear(d);
-      const key = `${year}-${isoWeek}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        weeks.push({ isoWeek, year });
-      }
-      if (weeks.length >= 8) break;
-    }
-    return weeks;
-  }, [events]);
+    const now = new Date();
+    return [0, 1, 2, 3].map((offset) => {
+      const d = subWeeks(now, offset);
+      return { isoWeek: getISOWeek(d), year: getISOWeekYear(d) };
+    });
+  }, []);
 
   // Poll for re-run result
   useEffect(() => {
@@ -524,7 +529,7 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
     setSearching(true);
     searchDebounce.current = setTimeout(async () => {
       const res = await fetch(
-        `/api/product-lines/${productLineId}/trigger-events?q=${encodeURIComponent(search.trim())}`
+        `/api/product-lines/${productLineId}/trigger-events?q=${encodeURIComponent(search.trim())}${showManual ? "&showManual=true" : ""}`
       );
       if (res.ok) setSearchResults(await res.json());
       setSearching(false);
@@ -939,7 +944,16 @@ function RunLog({ events, setEvents, productLineId, jiraBaseUrl, agentConfig }: 
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <div
+              onClick={() => setShowManual((v) => !v)}
+              className={`relative w-7 h-4 rounded-full transition-colors ${showManual ? "bg-zinc-700" : "bg-zinc-200"}`}
+            >
+              <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${showManual ? "translate-x-3.5" : "translate-x-0.5"}`} />
+            </div>
+            <span className="text-[11px] text-zinc-500">Manual runs</span>
+          </label>
           {(["all", "update", "no_update", "failed"] as LogFilter[]).map((f) => {
             const label =
               f === "all" ? `All (${meaningful.length})` :

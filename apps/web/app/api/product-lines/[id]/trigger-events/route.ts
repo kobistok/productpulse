@@ -20,11 +20,20 @@ export async function GET(
   }
 
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+  const showManual = req.nextUrl.searchParams.get("showManual") === "true";
+
+  const statusFilter = { notIn: ["skipped", "rerun_pending"] as string[] };
+  const sourceFilter = showManual ? undefined : { not: "manual" as const };
+
+  const base = {
+    productLineId: id,
+    status: statusFilter,
+    ...(sourceFilter ? { source: sourceFilter } : {}),
+  };
 
   const where = q
     ? {
-        productLineId: id,
-        status: { not: "skipped" as const },
+        ...base,
         OR: [
           { detail: { contains: q, mode: "insensitive" as const } },
           { workerDetail: { contains: q, mode: "insensitive" as const } },
@@ -34,7 +43,7 @@ export async function GET(
           { trigger: { repoUrl: { contains: q, mode: "insensitive" as const } } },
         ],
       }
-    : { productLineId: id, status: { not: "skipped" as const } };
+    : base;
 
   const events = await prisma.triggerEvent.findMany({
     where,
