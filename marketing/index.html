@@ -210,12 +210,14 @@
 
     .hero h1 {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(44px, 7vw, 80px);
+      font-size: clamp(32px, 7vw, 80px);
       font-weight: 800;
-      line-height: 1.1;
+      line-height: 1.15;
       letter-spacing: -0.03em;
       max-width: 900px;
       margin-bottom: 24px;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
 
     .hero h1 .gradient-text {
@@ -893,8 +895,10 @@
 
     /* ── Responsive ── */
     @media (max-width: 900px) {
-      nav { padding: 0 24px; }
+      nav { padding: 0 16px; gap: 0; }
       .nav-links { display: none; }
+      .nav-actions .btn-ghost { display: none; }
+      .nav-actions .btn-primary { padding: 8px 14px; font-size: 13px; }
       .problem-grid { grid-template-columns: 1fr; }
       .features-grid { grid-template-columns: 1fr; }
       .how-grid { grid-template-columns: 1fr; gap: 40px; }
@@ -904,6 +908,16 @@
       .stats-row { grid-template-columns: 1fr; }
       .cta-form { flex-direction: column; }
       .demo-body { padding: 20px; }
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 36px; overflow-wrap: break-word; }
+      .hero h1 br { display: none; }
+      .hero-sub { font-size: 15px; }
+      .section-title { font-size: 28px; }
+      .cta-box { padding: 48px 24px; }
+      .section-inner { padding: 64px 16px; }
+      .logos-row { gap: 28px; }
     }
   </style>
 </head>
