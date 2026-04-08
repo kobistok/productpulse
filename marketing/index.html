@@ -3,13 +3,129 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Syncop — Your Product Updates, On Autopilot</title>
-  <meta name="description" content="Syncop connects to your code repos, Jira, and CI to automatically write weekly product updates for your team and stakeholders. Ship fast, communicate always." />
+
+  <!-- Primary SEO -->
+  <title>Syncop — Automated Product Updates for Engineering Teams</title>
+  <meta name="description" content="Syncop automatically writes weekly product updates from your GitHub, GitLab, Jira, and CI data. Save 4+ hours per week. Ship every week, communicate every week — on autopilot." />
+  <meta name="keywords" content="product update automation, automated changelog, AI product updates, engineering changelog, Jira GitHub integration, weekly product updates, product communication tool" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://syncop.io/" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://syncop.io/" />
+  <meta property="og:title" content="Syncop — Automated Product Updates for Engineering Teams" />
+  <meta property="og:description" content="Syncop connects to GitHub, GitLab, Jira, and CI to automatically write crisp weekly product updates. Save 4+ hours per week — no meetings, no Slack nudges." />
+  <meta property="og:image" content="https://syncop.io/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="Syncop" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@syncopapp" />
+  <meta name="twitter:title" content="Syncop — Automated Product Updates for Engineering Teams" />
+  <meta name="twitter:description" content="Connects to GitHub, GitLab, Jira, and CI to automatically write weekly product updates. Save 4+ hours per week." />
+  <meta name="twitter:image" content="https://syncop.io/og-image.png" />
+
+  <!-- Structured data: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Syncop",
+    "url": "https://syncop.io",
+    "logo": "https://syncop.io/favicon.svg",
+    "description": "Syncop automatically generates weekly product updates from your GitHub, GitLab, Jira, and CI pipeline data.",
+    "sameAs": []
+  }
+  </script>
+
+  <!-- Structured data: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Syncop",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "url": "https://syncop.io",
+    "description": "AI-powered product update automation. Syncop reads your commits, Jira tickets, and CI pipelines and writes structured weekly product updates automatically.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free early access — first 100 teams get three months free."
+    },
+    "featureList": [
+      "Automated weekly product updates",
+      "GitHub and GitLab integration",
+      "Jira ticket linking",
+      "CircleCI pipeline context",
+      "AI-generated changelog",
+      "Filter rules and product context",
+      "Full audit trail"
+    ]
+  }
+  </script>
+
+  <!-- Structured data: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Syncop?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Syncop is an AI-powered tool that automatically generates weekly product updates by reading your GitHub or GitLab commits, Jira tickets, and CI pipeline data. It saves product managers and engineering teams 4+ hours per week."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which tools does Syncop integrate with?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Syncop integrates with GitHub, GitLab, Jira, and CircleCI. Slack delivery, Linear, GitHub Actions, and Notion export are on the roadmap."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does Syncop generate product updates?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Syncop watches your connected repositories for merged commits, maps them to Jira tickets, reads CI outcomes, and uses AI to generate a structured, human-readable product update every week. You review and approve — or let it publish automatically."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I customize what Syncop writes about?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. You can define a filter rule (e.g. 'only include customer-facing changes') and a product context describing your audience and what matters to them. Syncop follows these rules when generating every update."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Syncop free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Early access is free. The first 100 teams to join the waitlist get three months of free access."
+        }
+      }
+    ]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="alternate icon" href="favicon.svg" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -910,6 +1026,55 @@
       .demo-body { padding: 20px; }
     }
 
+    /* ── FAQ ── */
+    .faq-section { border-top: 1px solid var(--border); }
+
+    .faq-list { margin-top: 48px; max-width: 720px; }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+    }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0;
+      line-height: 1.5;
+    }
+
+    .faq-question:hover { color: var(--teal); }
+
+    .faq-chevron {
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      color: var(--text-dim);
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--teal); }
+
+    .faq-answer {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+
+    .faq-item.open .faq-answer { max-height: 300px; padding-top: 12px; }
+
     @media (max-width: 600px) {
       .hero h1 { font-size: 36px; overflow-wrap: break-word; }
       .hero h1 br { display: none; }
@@ -924,9 +1089,9 @@
 <body>
 
 <!-- ── Navigation ── -->
-<nav>
-  <a href="#" class="nav-logo">
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+<nav aria-label="Main navigation">
+  <a href="/" class="nav-logo" aria-label="Syncop home">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <rect width="32" height="32" rx="9" fill="url(#logo-bg)"/>
       <path d="M8 20C8 20 10 14 16 14C22 14 24 8 24 8" stroke="url(#logo-stroke-1)" stroke-width="2.5" stroke-linecap="round"/>
       <path d="M8 24C8 24 11 16 16 16C21 16 24 10 24 10" stroke="url(#logo-stroke-2)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
@@ -966,8 +1131,10 @@
   </div>
 </nav>
 
+<main id="main-content">
+
 <!-- ── Hero ── -->
-<section class="hero">
+<section class="hero" aria-labelledby="hero-heading">
   <div class="grid-bg"></div>
   <div class="hero-glow"></div>
 
@@ -976,7 +1143,7 @@
     AI-powered product update automation
   </div>
 
-  <h1>
+  <h1 id="hero-heading">
     Your team ships.<br/>
     <span class="gradient-text">Stakeholders just know.</span>
   </h1>
@@ -1322,6 +1489,77 @@
   </div>
 </section>
 
+<!-- ── FAQ ── -->
+<section class="faq-section" aria-labelledby="faq-heading">
+  <div class="section-inner">
+    <p class="section-label">FAQ</p>
+    <h2 class="section-title" id="faq-heading">Common questions</h2>
+    <dl class="faq-list">
+
+      <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+        <dt>
+          <button class="faq-question" aria-expanded="false" itemprop="name">
+            What exactly does Syncop do?
+            <svg class="faq-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 7l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </dt>
+        <dd class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+          <span itemprop="text">Syncop is an AI agent that watches your GitHub or GitLab repositories, maps merged commits to your Jira tickets, reads CI pipeline outcomes, and generates a structured, human-readable product update every week. You review and approve it — or let it publish automatically. No manual writing, no meetings, no chasing engineers for context.</span>
+        </dd>
+      </div>
+
+      <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+        <dt>
+          <button class="faq-question" aria-expanded="false" itemprop="name">
+            Which tools does Syncop integrate with?
+            <svg class="faq-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 7l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </dt>
+        <dd class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+          <span itemprop="text">Today: GitHub, GitLab, Jira, and CircleCI. Coming soon: Slack delivery, Linear, GitHub Actions, and Notion export. If your team uses a different stack, reach out — we prioritise integrations based on demand.</span>
+        </dd>
+      </div>
+
+      <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+        <dt>
+          <button class="faq-question" aria-expanded="false" itemprop="name">
+            Can I control what the AI writes about?
+            <svg class="faq-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 7l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </dt>
+        <dd class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+          <span itemprop="text">Yes — fully. You define a filter rule ("only include customer-facing changes", "ignore internal tooling") and a product context describing your users and what matters to them. Syncop follows these on every run. You can also override them per-run to test new prompts before rolling them out.</span>
+        </dd>
+      </div>
+
+      <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+        <dt>
+          <button class="faq-question" aria-expanded="false" itemprop="name">
+            What if we missed a week or want to re-run?
+            <svg class="faq-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 7l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </dt>
+        <dd class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+          <span itemprop="text">No problem. Syncop keeps a full run log and lets you re-run any past week with fresh Jira data. You can also batch re-run multiple weeks at once and review the output side-by-side before approving anything.</span>
+        </dd>
+      </div>
+
+      <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+        <dt>
+          <button class="faq-question" aria-expanded="false" itemprop="name">
+            How much does Syncop cost?
+            <svg class="faq-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 7l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </dt>
+        <dd class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+          <span itemprop="text">Early access is free. The first 100 teams on the waitlist get three full months at no cost. Pricing will be based on the number of product lines and team members — we'll share details before charging anyone.</span>
+        </dd>
+      </div>
+
+    </dl>
+  </div>
+</section>
+
 <!-- ── CTA ── -->
 <section class="cta-section" id="waitlist">
   <div class="section-inner">
@@ -1341,8 +1579,10 @@
   </div>
 </section>
 
+</main>
+
 <!-- ── Footer ── -->
-<footer>
+<footer aria-label="Site footer">
   <div class="footer-inner">
     <a href="#" class="nav-logo" style="text-decoration:none;">
       <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
@@ -1387,6 +1627,22 @@
       if (target) {
         e.preventDefault();
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-question').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => {
+        i.classList.remove('open');
+        i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+      });
+      if (!isOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
       }
     });
   });
