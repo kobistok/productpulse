@@ -25,7 +25,7 @@ export default function OnboardingPage() {
         org_id: org.id,
         org_slug: org.slug,
       });
-      router.push("/product-lines");
+      router.push("/product-lines?onboarding=1");
       router.refresh();
     } else {
       setError("Failed to create workspace. Please try again.");

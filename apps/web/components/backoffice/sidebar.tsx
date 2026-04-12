@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Settings, LogOut, Users, X, FileText } from "lucide-react";
+import { LayoutGrid, Settings, LogOut, Users, X, FileText, Rocket } from "lucide-react";
 import { signOut } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { User, Organization } from "@productpulse/db";
+import { useOnboarding } from "@/components/onboarding/provider";
+import { ONBOARDING_STEPS } from "@/components/onboarding/wizard";
 
 const NAV_ITEMS = [
   { href: "/product-lines", label: "Product Lines", icon: LayoutGrid },
@@ -27,6 +29,10 @@ interface SidebarProps {
 export function Sidebar({ user, org, isSuperAdmin, isImpersonating, realUserName }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const onboarding = useOnboarding();
+  const onboardingRemaining = onboarding
+    ? ONBOARDING_STEPS.length - Object.values(onboarding.data.completed).filter(Boolean).length
+    : 0;
   const [showDialog, setShowDialog] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,7 +82,7 @@ export function Sidebar({ user, org, isSuperAdmin, isImpersonating, realUserName
           <p className="text-sm font-semibold text-zinc-900 truncate">{org.name}</p>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 flex flex-col">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -92,6 +98,22 @@ export function Sidebar({ user, org, isSuperAdmin, isImpersonating, realUserName
               {label}
             </Link>
           ))}
+
+          {/* Getting started button */}
+          {onboarding && (
+            <button
+              onClick={onboarding.open}
+              className="mt-auto flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm transition-colors text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+            >
+              <Rocket size={15} />
+              <span className="flex-1 text-left">Getting started</span>
+              {onboardingRemaining > 0 && (
+                <span className="text-[10px] font-bold bg-zinc-900 text-white rounded-full w-4 h-4 flex items-center justify-center shrink-0">
+                  {onboardingRemaining}
+                </span>
+              )}
+            </button>
+          )}
         </nav>
 
         {/* Impersonation banner */}
