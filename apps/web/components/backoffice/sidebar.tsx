@@ -71,7 +71,7 @@ export function Sidebar({ user, org, isSuperAdmin, isImpersonating, realUserName
               <rect width="32" height="32" rx="7" fill="#18181b"/>
               <polyline points="2,16 7,16 9.5,9 13,23 16,7 19,23 22.5,9 25,16 30,16" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Product Pulse</p>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Syncop</p>
           </div>
           <p className="text-sm font-semibold text-zinc-900 truncate">{org.name}</p>
         </div>

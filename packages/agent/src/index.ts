@@ -349,7 +349,7 @@ ${context.jira.map((t) => {
 
   const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-  return `You are the Product Pulse agent for the "${productLine.name}" product line.
+  return `You are the Syncop agent for the "${productLine.name}" product line.
 Today's date: ${today}
 ${contextSection}
 

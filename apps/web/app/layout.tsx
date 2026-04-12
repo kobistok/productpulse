@@ -6,7 +6,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Product Pulse",
+  title: "Syncop",
   description: "Weekly product updates, powered by AI",
 };
 

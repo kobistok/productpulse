@@ -40,7 +40,7 @@ export function JoinClient({ orgName, token }: Props) {
       <div className="bg-white rounded-xl border border-zinc-200 p-10 w-full max-w-sm shadow-sm">
         <h1 className="text-xl font-semibold text-zinc-900">You&apos;ve been invited</h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Join <span className="font-medium text-zinc-900">{orgName}</span> on Product Pulse
+          Join <span className="font-medium text-zinc-900">{orgName}</span> on Syncop
         </p>
 
         {error && <p className="text-sm text-red-600 mt-4">{error}</p>}

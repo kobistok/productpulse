@@ -32,7 +32,7 @@ export default async function ContentSharePage({
               <rect width="32" height="32" rx="7" fill="#18181b"/>
               <polyline points="2,16 7,16 9.5,9 13,23 16,7 19,23 22.5,9 25,16 30,16" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Product Pulse</span>
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Syncop</span>
           </div>
           <h1 className="text-2xl font-semibold text-zinc-900">{agent.name}</h1>
         </div>

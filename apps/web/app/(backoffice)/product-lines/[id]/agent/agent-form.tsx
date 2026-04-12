@@ -73,7 +73,7 @@ export function AgentForm({ productLineId, productLineName, agent }: Props) {
       <div className="mb-6 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-700">
         <Sparkles size={12} className="mt-0.5 shrink-0" />
         <p>
-          Product Pulse uses a built-in AI prompt to generate structured updates.
+          Syncop uses a built-in AI prompt to generate structured updates.
           Add product context below to help the agent make better decisions.
         </p>
       </div>

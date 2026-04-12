@@ -53,7 +53,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
   return (
     <div className="h-screen flex flex-col bg-zinc-50">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex-shrink-0">
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Product Pulse</p>
+        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Syncop</p>
         <h1 className="text-lg font-semibold text-zinc-900 mt-0.5">{dashboardInvite.org.name}</h1>
       </header>
 

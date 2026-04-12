@@ -47,7 +47,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
       <div className="bg-white rounded-xl border border-zinc-200 p-10 w-full max-w-sm shadow-sm">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-zinc-900">Product Pulse</h1>
+          <h1 className="text-2xl font-semibold text-zinc-900">Syncop</h1>
           <p className="text-sm text-zinc-500 mt-1">Sign in to your workspace</p>
         </div>
 
