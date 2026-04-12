@@ -4,9 +4,10 @@ import { useState } from "react";
 import { UpdateContent } from "@/components/update-content";
 import { LocalTime } from "@/components/local-time";
 import { Button } from "@/components/ui/button";
-import { X, RefreshCw, Check } from "lucide-react";
+import { X, RefreshCw, Check, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import type { StoredAgentInput } from "@/lib/cloud-tasks";
+import { UpdateBannerModal } from "@/components/update-banner-modal";
 
 type UpdateRow = {
   id: string;
@@ -36,6 +37,7 @@ type WorkflowData = {
 
 interface Props {
   productLineId: string;
+  productLineName: string;
   currentWeek: number;
   currentYear: number;
   updates: UpdateRow[];
@@ -58,6 +60,7 @@ function extractDecisionReason(workerDetail: string | null): string | null {
 
 export function UpdatesSection({
   productLineId,
+  productLineName,
   currentWeek,
   currentYear,
   updates,
@@ -66,6 +69,9 @@ export function UpdatesSection({
   hasTriggersConfigured,
 }: Props) {
   const [localUpdates, setLocalUpdates] = useState(updates);
+
+  // Banner state
+  const [bannerTarget, setBannerTarget] = useState<UpdateRow | null>(null);
 
   // Explore state
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -162,6 +168,14 @@ export function UpdatesSection({
                 <p className="text-xs text-zinc-400">W{thisWeekUpdate.isoWeek} {thisWeekUpdate.year}</p>
                 <span className="text-xs text-zinc-300">·</span>
                 <LocalTime iso={thisWeekUpdate.updatedAt} className="text-xs text-zinc-400" />
+                <button
+                  onClick={() => setBannerTarget(thisWeekUpdate)}
+                  className="ml-auto flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 transition-colors"
+                  title="Export newsletter banner"
+                >
+                  <ImageIcon size={12} />
+                  Banner
+                </button>
               </div>
               <UpdateContent
                 content={thisWeekUpdate.content}
@@ -199,6 +213,14 @@ export function UpdatesSection({
                   <p className="text-xs font-medium text-zinc-400">W{u.isoWeek} {u.year}</p>
                   <span className="text-xs text-zinc-300">·</span>
                   <LocalTime iso={u.updatedAt} className="text-xs text-zinc-400" />
+                  <button
+                    onClick={() => setBannerTarget(u)}
+                    className="ml-auto flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 transition-colors"
+                    title="Export newsletter banner"
+                  >
+                    <ImageIcon size={12} />
+                    Banner
+                  </button>
                 </div>
                 <UpdateContent
                   content={u.content}
@@ -210,6 +232,17 @@ export function UpdatesSection({
             ))}
           </div>
         </section>
+      )}
+
+      {/* ── Banner modal ──────────────────────────────────────────────────── */}
+      {bannerTarget && (
+        <UpdateBannerModal
+          updateId={bannerTarget.id}
+          productLineName={productLineName}
+          week={bannerTarget.isoWeek}
+          year={bannerTarget.year}
+          onClose={() => setBannerTarget(null)}
+        />
       )}
 
       {/* ── Explore modal ─────────────────────────────────────────────────── */}

@@ -94,6 +94,7 @@ export default async function ProductLineOverviewPage({ params }: Props) {
 
       <UpdatesSection
         productLineId={id}
+        productLineName={productLine.name}
         currentWeek={currentWeek}
         currentYear={currentYear}
         updates={updates}
