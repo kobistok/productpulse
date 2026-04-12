@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — Syncop</title>
+  <meta name="description" content="Syncop Terms of Service. Read the terms governing your use of the Syncop platform." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://syncop.app/terms" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black:   #080808;
+      --surface: #111111;
+      --violet:  #7c5cfc;
+      --violet-l:#a78bfa;
+      --teal:    #2dd4bf;
+      --text-1:  #f5f5f5;
+      --text-2:  #a3a3a3;
+      --text-3:  #525252;
+      --border:  rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.12);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--black);
+      color: var(--text-1);
+      line-height: 1.7;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* blob */
+    .blob { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; opacity: 0.25; }
+    .blob-1 { width: 600px; height: 400px; background: radial-gradient(ellipse, #5b3fd1 0%, transparent 70%); top: -120px; left: -80px; }
+    .blob-2 { width: 400px; height: 300px; background: radial-gradient(ellipse, #0f766e 0%, transparent 70%); top: 300px; right: -80px; }
+
+    /* nav */
+    nav {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 10px 16px 10px 20px;
+      background: rgba(12,12,12,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      width: min(92vw, 680px);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+    .nav-logo-text { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 16px; color: var(--text-1); letter-spacing: -0.02em; }
+    .btn-nav { padding: 8px 20px; background: #fff; color: #080808; font-size: 13.5px; font-weight: 600; border-radius: 999px; text-decoration: none; transition: opacity 0.15s; white-space: nowrap; }
+    .btn-nav:hover { opacity: 0.85; }
+
+    /* layout */
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 108px 24px 96px;
+      position: relative;
+      z-index: 1;
+    }
+    .doc-header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .doc-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--violet-l);
+      margin-bottom: 12px;
+    }
+    .doc-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: #fff;
+      margin-bottom: 14px;
+      line-height: 1.1;
+    }
+    .doc-meta { font-size: 13px; color: var(--text-3); }
+    .doc-meta a { color: var(--teal); text-decoration: none; }
+    .doc-meta a:hover { text-decoration: underline; }
+
+    /* toc */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 52px;
+    }
+    .toc h2 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 24px;
+    }
+    .toc li { counter-increment: toc; font-size: 13px; margin-bottom: 7px; }
+    .toc li::before { content: counter(toc) ". "; color: var(--text-3); font-weight: 600; }
+    .toc a { color: var(--text-2); text-decoration: none; }
+    .toc a:hover { color: var(--teal); }
+
+    /* sections */
+    .section { margin-bottom: 48px; }
+    .section h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+      color: var(--text-1);
+      padding-top: 8px;
+    }
+    .section h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-1);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    .section p { font-size: 14.5px; color: var(--text-2); margin-bottom: 14px; line-height: 1.7; }
+    .section p strong { color: var(--text-1); font-weight: 600; }
+    .section ul, .section ol { padding-left: 20px; margin-bottom: 14px; }
+    .section li { font-size: 14.5px; color: var(--text-2); margin-bottom: 6px; line-height: 1.65; }
+    .section li strong { color: var(--text-1); }
+    .section a { color: var(--teal); text-decoration: none; }
+    .section a:hover { text-decoration: underline; }
+
+    /* callouts */
+    .callout {
+      background: rgba(124,92,252,0.07);
+      border: 1px solid rgba(124,92,252,0.18);
+      border-left: 3px solid var(--violet);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 13.5px;
+      color: var(--text-2);
+    }
+    .callout strong { color: var(--text-1); }
+    .callout-teal { background: rgba(45,212,191,0.06); border-color: rgba(45,212,191,0.18); border-left-color: var(--teal); }
+    .callout-yellow { background: rgba(255,210,80,0.05); border-color: rgba(255,210,80,0.18); border-left-color: #ffd250; }
+
+    /* tables */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0 24px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    th { text-align: left; padding: 10px 14px; background: rgba(255,255,255,0.04); color: var(--text-3); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; color: var(--text-2); border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+    td strong { color: var(--text-1); }
+    tr:last-child td { border-bottom: none; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    /* footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 760px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 13px; color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text-2); }
+    .footer-copy { font-size: 12px; color: var(--text-3); }
+
+    @media (max-width: 600px) {
+      nav { top: 12px; width: calc(100vw - 32px); padding: 9px 12px 9px 16px; }
+      main { padding: 90px 16px 72px; }
+      .toc ol { grid-template-columns: 1fr; }
+      footer { padding: 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1" aria-hidden="true"></div>
+<div class="blob blob-2" aria-hidden="true"></div>
+
+<nav aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Syncop home">
+    <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="url(#nb)"/>
+      <path d="M8 20C8 20 10 14 16 14C22 14 24 8 24 8" stroke="url(#ns)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M8 24C8 24 11 17 16 17C21 17 24 11 24 11" stroke="url(#ns2)" stroke-width="1.4" stroke-linecap="round" opacity="0.4"/>
+      <circle cx="16" cy="16" r="2.5" fill="url(#nd)"/>
+      <defs>
+        <linearGradient id="nb" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#1a0a3e"/><stop offset="100%" stop-color="#0a1a30"/></linearGradient>
+        <linearGradient id="ns" x1="8" y1="8" x2="24" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient>
+        <linearGradient id="ns2" x1="8" y1="11" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
+        <radialGradient id="nd" cx="50%" cy="50%"><stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#38bdf8"/></radialGradient>
+      </defs>
+    </svg>
+    <span class="nav-logo-text">syncop</span>
+  </a>
+  <a href="https://console.syncop.app" class="btn-nav">Log in</a>
+</nav>
+
+<main>
+  <header class="doc-header">
+    <p class="doc-label">Legal</p>
+    <h1 class="doc-title">Terms of Service</h1>
+    <p class="doc-meta">
+      Effective date: <strong>April 8, 2026</strong> &nbsp;·&nbsp;
+      Last updated: <strong>April 8, 2026</strong><br/>
+      Questions? <a href="mailto:legal@syncop.app">legal@syncop.app</a>
+    </p>
+  </header>
+
+  <div class="callout">
+    <strong>Please read these terms carefully.</strong> By accessing or using Syncop, you agree to be bound by these Terms of Service and our <a href="privacy.html" style="color:var(--teal)">Privacy Policy</a>. If you do not agree, do not use the Service.
+  </div>
+
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#s1">Acceptance of Terms</a></li>
+      <li><a href="#s2">Definitions</a></li>
+      <li><a href="#s3">Account Registration</a></li>
+      <li><a href="#s4">Permitted Use</a></li>
+      <li><a href="#s5">Subscriptions &amp; Payment</a></li>
+      <li><a href="#s6">Free Trials &amp; Beta</a></li>
+      <li><a href="#s7">Customer Data</a></li>
+      <li><a href="#s8">AI Features</a></li>
+      <li><a href="#s9">Intellectual Property</a></li>
+      <li><a href="#s10">Third-Party Integrations</a></li>
+      <li><a href="#s11">Confidentiality</a></li>
+      <li><a href="#s12">Privacy</a></li>
+      <li><a href="#s13">Security</a></li>
+      <li><a href="#s14">Warranties &amp; Disclaimers</a></li>
+      <li><a href="#s15">Limitation of Liability</a></li>
+      <li><a href="#s16">Indemnification</a></li>
+      <li><a href="#s17">Term &amp; Termination</a></li>
+      <li><a href="#s18">Effect of Termination</a></li>
+      <li><a href="#s19">Modifications to Service</a></li>
+      <li><a href="#s20">Changes to Terms</a></li>
+      <li><a href="#s21">Dispute Resolution</a></li>
+      <li><a href="#s22">Governing Law</a></li>
+      <li><a href="#s23">General Provisions</a></li>
+      <li><a href="#s24">Contact</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <section class="section" id="s1">
+    <h2>1. Acceptance of Terms</h2>
+    <p>These Terms of Service ("Terms") constitute a legally binding agreement between Syncop ("Syncop," "we," "us," or "our") and the individual or entity accessing or using the Syncop platform and related services ("you" or "Customer").</p>
+    <p>By creating an account, clicking "I agree," or otherwise accessing or using the Service, you represent that: (a) you have read and understood these Terms; (b) you are at least 18 years old and have the legal authority to enter into this agreement; and (c) if you are accepting on behalf of a company or other legal entity, you have the authority to bind that entity to these Terms.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="section" id="s2">
+    <h2>2. Definitions</h2>
+    <p>Throughout these Terms, the following definitions apply:</p>
+    <ul>
+      <li><strong>"Service"</strong> means the Syncop platform, including the web application at console.syncop.app, APIs, agents, and any related software or features.</li>
+      <li><strong>"Customer Data"</strong> means any data, content, or information submitted by you or on your behalf through the Service, including data pulled from connected third-party systems.</li>
+      <li><strong>"Output"</strong> means content generated by the AI features of the Service in response to Customer Data, including summaries, reports, and recommendations.</li>
+      <li><strong>"Subscription"</strong> means a paid or free-tier access plan authorizing use of the Service for a defined period.</li>
+      <li><strong>"Authorized User"</strong> means any individual you permit to access the Service under your account.</li>
+      <li><strong>"Documentation"</strong> means the usage guides, API references, and help content made available at syncop.app.</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section class="section" id="s3">
+    <h2>3. Account Registration</h2>
+    <p>To use the Service, you must create an account using a supported authentication method (currently Google OAuth). You agree to:</p>
+    <ul>
+      <li>Provide accurate, current, and complete registration information.</li>
+      <li>Maintain the security of your account credentials and not share them with unauthorized persons.</li>
+      <li>Notify us promptly at <a href="mailto:security@syncop.app">security@syncop.app</a> if you suspect unauthorized access to your account.</li>
+      <li>Be responsible for all activity that occurs under your account, including actions by Authorized Users.</li>
+    </ul>
+    <p>We reserve the right to suspend or terminate accounts that contain inaccurate information or that we reasonably believe have been compromised.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="section" id="s4">
+    <h2>4. Permitted Use</h2>
+    <h3>License Grant</h3>
+    <p>Subject to these Terms and timely payment of applicable fees, Syncop grants you a limited, non-exclusive, non-transferable, non-sublicensable right to access and use the Service solely for your internal business purposes.</p>
+    <h3>Acceptable Use</h3>
+    <p>You agree not to, and not to permit Authorized Users to:</p>
+    <ul>
+      <li>Use the Service to violate any applicable law, regulation, or third-party right.</li>
+      <li>Reverse-engineer, decompile, disassemble, or attempt to derive the source code of the Service.</li>
+      <li>Sublicense, resell, or offer the Service as a white-label product to third parties without our written consent.</li>
+      <li>Introduce malicious code, viruses, or any software that could harm the Service or other users.</li>
+      <li>Use automated tools (scrapers, bots, crawlers) to extract data from the Service beyond what is permitted by the API.</li>
+      <li>Attempt to gain unauthorized access to other accounts, systems, or networks connected to the Service.</li>
+      <li>Use the Service to process data in categories that are prohibited by applicable law without appropriate safeguards.</li>
+      <li>Circumvent usage limits, rate limits, or other technical controls.</li>
+    </ul>
+    <p>We may investigate and take action against any use that violates these Terms, including suspension or termination of your account.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="section" id="s5">
+    <h2>5. Subscriptions &amp; Payment</h2>
+    <h3>Fees</h3>
+    <p>Subscription fees are described on our pricing page or in an order form. All fees are in US Dollars unless otherwise specified. You authorize us (or our payment processor) to charge your payment method on a recurring basis for the Subscription period selected.</p>
+    <h3>Billing Cycle</h3>
+    <p>Subscriptions are billed in advance on a monthly or annual basis, as selected at checkout. Fees are non-refundable except as expressly set out in these Terms or required by applicable law.</p>
+    <h3>Upgrades &amp; Downgrades</h3>
+    <p>You may upgrade your Subscription at any time; the new rate takes effect immediately and is prorated for the current period. Downgrades take effect at the start of the next billing cycle.</p>
+    <h3>Late Payment</h3>
+    <p>If payment fails, we will notify you and may suspend your access to the Service until payment is received. Accounts unpaid for more than 30 days may be terminated.</p>
+    <h3>Taxes</h3>
+    <p>Fees are exclusive of any taxes, levies, or duties. You are responsible for paying all such amounts. If we are required to collect or pay taxes on your behalf, those amounts will be added to your invoice.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="section" id="s6">
+    <h2>6. Free Trials &amp; Beta</h2>
+    <p>We may offer free trials or access to beta features at our discretion. Unless otherwise stated:</p>
+    <ul>
+      <li>Free trials are for new customers only and are limited to one trial per organization.</li>
+      <li>At the end of a free trial, your account will convert to a paid Subscription or be suspended unless you cancel.</li>
+      <li>Beta features are provided "as is" without any warranty or SLA commitment. We may discontinue or substantially change beta features at any time.</li>
+    </ul>
+    <div class="callout callout-yellow">
+      <strong>Beta feedback:</strong> By using beta features, you grant us a royalty-free license to use any feedback you provide to improve the Service. We will not identify you by name in any public communications without your consent.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="section" id="s7">
+    <h2>7. Customer Data</h2>
+    <h3>Your Ownership</h3>
+    <p>You retain all rights, title, and interest in and to Customer Data. These Terms do not grant Syncop any ownership rights in Customer Data.</p>
+    <h3>License to Syncop</h3>
+    <p>You grant Syncop a limited, worldwide, non-exclusive license to access, store, process, and transmit Customer Data solely to: (a) provide the Service to you; (b) prevent or address technical or security issues; and (c) comply with legal obligations. This license terminates when you delete the data or terminate your account, subject to our retention obligations.</p>
+    <h3>Your Responsibilities</h3>
+    <p>You are solely responsible for the accuracy, legality, and appropriateness of Customer Data. You represent that you have all necessary rights to submit Customer Data to the Service and that doing so does not violate any third-party right or applicable law.</p>
+    <h3>Sensitive Data</h3>
+    <p>The Service is not designed to process special categories of personal data (health, biometric, financial account numbers, government IDs, etc.). Do not submit such data unless you have executed a separate agreement with us covering its processing.</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="section" id="s8">
+    <h2>8. AI Features</h2>
+    <div class="callout callout-teal">
+      <strong>Your data is never used to train AI models.</strong> Syncop and its AI subprocessors do not train foundation models on Customer Data. Outputs are generated solely from your inputs and the base model's pre-existing knowledge.
+    </div>
+    <h3>How AI Works in Syncop</h3>
+    <p>Syncop uses large language models (currently Anthropic Claude) to analyze signals from your connected tools — such as Jira tickets, GitHub pull requests, and CI/CD pipelines — and generate product update summaries for stakeholders. Customer Data is sent to Anthropic's API solely to produce these Outputs.</p>
+    <h3>Ownership of Outputs</h3>
+    <p>As between you and Syncop, you own all Outputs generated by the Service from your Customer Data. Syncop assigns to you any rights it may have in such Outputs. You are responsible for how you use, distribute, or rely on Outputs.</p>
+    <h3>Accuracy Disclaimer</h3>
+    <p>AI-generated Outputs are probabilistic by nature and may contain inaccuracies, omissions, or hallucinations. <strong>Outputs are not professional advice.</strong> You should review all Outputs before relying on them for decisions. Syncop is not liable for decisions made based on AI Outputs.</p>
+    <h3>Prohibited AI Uses</h3>
+    <p>You agree not to use AI features to generate content that is defamatory, discriminatory, harmful, or otherwise unlawful, or to attempt to extract training data, model weights, or system prompts from the Service.</p>
+  </section>
+
+  <!-- 9 -->
+  <section class="section" id="s9">
+    <h2>9. Intellectual Property</h2>
+    <h3>Syncop Property</h3>
+    <p>The Service, including all software, algorithms, models, interfaces, documentation, and branding, is the exclusive property of Syncop and its licensors. Nothing in these Terms transfers any ownership of Syncop's intellectual property to you.</p>
+    <h3>Feedback</h3>
+    <p>If you provide suggestions, bug reports, or other feedback about the Service, you grant Syncop a perpetual, irrevocable, royalty-free license to use and incorporate that feedback into the Service without any obligation to you.</p>
+    <h3>Usage Data</h3>
+    <p>We may collect and use anonymized, aggregated usage data derived from your use of the Service (e.g., feature usage statistics, performance metrics) to improve the Service and for our business purposes. Such data will not identify you or your organization.</p>
+  </section>
+
+  <!-- 10 -->
+  <section class="section" id="s10">
+    <h2>10. Third-Party Integrations</h2>
+    <p>The Service integrates with third-party platforms including Jira, GitHub, GitLab, Linear, CircleCI, and others (each a "Third-Party Service"). When you connect a Third-Party Service:</p>
+    <ul>
+      <li>You authorize Syncop to access and retrieve data from that Third-Party Service on your behalf using credentials or tokens you provide.</li>
+      <li>You represent that you have the rights and permissions necessary to authorize that access.</li>
+      <li>The Third-Party Service's own terms and privacy policies govern your relationship with that provider. Syncop is not responsible for the availability, accuracy, or practices of any Third-Party Service.</li>
+      <li>If a Third-Party Service changes its APIs or access policies, certain Syncop features may be affected. We will endeavor to update integrations promptly but do not guarantee uninterrupted connectivity.</li>
+    </ul>
+    <div class="callout">
+      <strong>Integration credentials:</strong> Store your integration tokens and API keys securely. You are responsible for rotating credentials if they are compromised.
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="section" id="s11">
+    <h2>11. Confidentiality</h2>
+    <p>Each party ("Disclosing Party") may share confidential information ("Confidential Information") with the other party ("Receiving Party"). Confidential Information includes any non-public information designated as confidential or that reasonably should be understood to be confidential given its nature.</p>
+    <p>The Receiving Party agrees to: (a) keep Confidential Information strictly confidential; (b) use it only to fulfill obligations under these Terms; and (c) not disclose it to third parties except as necessary to provide the Service (and only to parties bound by equivalent confidentiality obligations).</p>
+    <p>These obligations do not apply to information that: (a) is or becomes publicly available through no fault of the Receiving Party; (b) was already known to the Receiving Party; (c) is independently developed without reference to Confidential Information; or (d) must be disclosed by law (with prompt written notice to the Disclosing Party where permitted).</p>
+    <p>Your Customer Data is treated as your Confidential Information. Our technology, pricing, and non-public roadmap are our Confidential Information.</p>
+  </section>
+
+  <!-- 12 -->
+  <section class="section" id="s12">
+    <h2>12. Privacy</h2>
+    <p>Our <a href="privacy.html">Privacy Policy</a> describes how we collect, use, and protect personal data in connection with the Service. By using the Service, you agree to the Privacy Policy, which is incorporated into these Terms by reference.</p>
+    <p>If you are subject to the GDPR or similar data protection laws, please refer to our Privacy Policy for information about data subject rights, lawful bases for processing, and international data transfers.</p>
+    <p>To the extent the Service involves Syncop processing personal data on your behalf as a data processor, the parties agree to be bound by the Data Processing Addendum available at <a href="mailto:legal@syncop.app">legal@syncop.app</a> upon request.</p>
+  </section>
+
+  <!-- 13 -->
+  <section class="section" id="s13">
+    <h2>13. Security</h2>
+    <p>Syncop implements commercially reasonable technical and organizational measures to protect the Service and Customer Data from unauthorized access, disclosure, or destruction. These measures include encryption in transit (TLS 1.2+) and at rest, access controls, and regular security reviews.</p>
+    <p>You are responsible for maintaining the security of your account credentials, Authorized User access, and any systems that connect to the Service. Please report any suspected security vulnerabilities to <a href="mailto:security@syncop.app">security@syncop.app</a>.</p>
+    <p>In the event of a confirmed data breach affecting your Customer Data, we will notify you without undue delay and cooperate with your reasonable requests to investigate and remediate the incident.</p>
+  </section>
+
+  <!-- 14 -->
+  <section class="section" id="s14">
+    <h2>14. Warranties &amp; Disclaimers</h2>
+    <h3>Our Warranty</h3>
+    <p>Syncop warrants that the Service will perform materially in accordance with its Documentation under normal use. If the Service fails to meet this warranty, your sole remedy is for Syncop to use commercially reasonable efforts to correct the issue, or, if correction is not feasible within a reasonable time, to provide a pro-rata refund of prepaid fees for the affected period.</p>
+    <h3>Disclaimer</h3>
+    <p>EXCEPT AS EXPRESSLY SET OUT IN THESE TERMS, THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE." SYNCOP EXPRESSLY DISCLAIMS ALL OTHER WARRANTIES, EXPRESS OR IMPLIED, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. SYNCOP DOES NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF HARMFUL COMPONENTS, OR THAT ANY OUTPUT WILL BE ACCURATE OR COMPLETE.</p>
+  </section>
+
+  <!-- 15 -->
+  <section class="section" id="s15">
+    <h2>15. Limitation of Liability</h2>
+    <div class="callout callout-yellow">
+      <strong>Important:</strong> This section limits our financial liability to you. Please read carefully.
+    </div>
+    <h3>Exclusion of Consequential Damages</h3>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, NEITHER PARTY WILL BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS, LOSS OF REVENUE, LOSS OF DATA, LOSS OF GOODWILL, OR COST OF SUBSTITUTE SERVICES, ARISING OUT OF OR RELATED TO THESE TERMS OR THE SERVICE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+    <h3>Cap on Liability</h3>
+    <p>SYNCOP'S TOTAL CUMULATIVE LIABILITY TO YOU ARISING OUT OF OR RELATED TO THESE TERMS OR THE SERVICE WILL NOT EXCEED THE GREATER OF: (A) THE FEES PAID BY YOU TO SYNCOP IN THE TWELVE (12) MONTHS IMMEDIATELY PRECEDING THE CLAIM; OR (B) ONE HUNDRED US DOLLARS ($100).</p>
+    <h3>Essential Basis</h3>
+    <p>The parties acknowledge that these limitations reflect a reasonable allocation of risk and are an essential element of the basis of the bargain between the parties. Syncop would not provide the Service without these limitations.</p>
+    <p>Some jurisdictions do not allow certain liability exclusions. In those jurisdictions, our liability is limited to the greatest extent permitted by law.</p>
+  </section>
+
+  <!-- 16 -->
+  <section class="section" id="s16">
+    <h2>16. Indemnification</h2>
+    <p>You agree to indemnify, defend, and hold harmless Syncop and its officers, directors, employees, and agents from any claims, damages, losses, liabilities, costs, and expenses (including reasonable legal fees) arising out of or related to:</p>
+    <ul>
+      <li>Your use of the Service in violation of these Terms;</li>
+      <li>Customer Data submitted by you or your Authorized Users;</li>
+      <li>Your violation of any applicable law or third-party right;</li>
+      <li>Any dispute between you and a Third-Party Service provider.</li>
+    </ul>
+    <p>Syncop will promptly notify you of any claim for which it seeks indemnification and will cooperate reasonably in the defense. You may not settle any claim that imposes obligations on Syncop without our prior written consent.</p>
+  </section>
+
+  <!-- 17 -->
+  <section class="section" id="s17">
+    <h2>17. Term &amp; Termination</h2>
+    <h3>Term</h3>
+    <p>These Terms commence on the date you first access the Service and continue until your Subscription expires or is terminated in accordance with these Terms.</p>
+    <h3>Termination by You</h3>
+    <p>You may cancel your Subscription at any time through your account settings. Cancellation takes effect at the end of your current billing period. No refunds are issued for the remainder of a prepaid period, except where required by law.</p>
+    <h3>Termination by Syncop</h3>
+    <p>We may suspend or terminate your account immediately and without notice if:</p>
+    <ul>
+      <li>You materially breach these Terms and fail to cure the breach within 15 days of written notice;</li>
+      <li>We are required to do so by law or court order;</li>
+      <li>Your use poses a security risk to Syncop or other customers;</li>
+      <li>You become insolvent, make a general assignment for the benefit of creditors, or become subject to bankruptcy proceedings.</li>
+    </ul>
+    <p>We may also terminate the Service on 30 days' written notice for any reason.</p>
+  </section>
+
+  <!-- 18 -->
+  <section class="section" id="s18">
+    <h2>18. Effect of Termination</h2>
+    <p>Upon termination or expiration of your Subscription:</p>
+    <ul>
+      <li>Your right to access the Service ends immediately.</li>
+      <li>You may request an export of your Customer Data within 30 days of termination. After 30 days, we may delete your Customer Data in accordance with our retention schedule.</li>
+      <li>Accrued fees and any amounts owed remain payable.</li>
+      <li>Sections that by their nature should survive termination (including Confidentiality, Intellectual Property, Limitation of Liability, Indemnification, and Governing Law) will continue in effect.</li>
+    </ul>
+  </section>
+
+  <!-- 19 -->
+  <section class="section" id="s19">
+    <h2>19. Modifications to the Service</h2>
+    <p>We continuously improve the Service and may modify, add, or remove features at any time. We will provide reasonable notice of material changes that substantially reduce core functionality.</p>
+    <p>We do not commit to maintaining any specific integration, third-party connector, or AI model version. If we discontinue a material feature on which you rely, your sole remedy is to terminate your Subscription and receive a pro-rata refund of prepaid fees for the unused period.</p>
+  </section>
+
+  <!-- 20 -->
+  <section class="section" id="s20">
+    <h2>20. Changes to Terms</h2>
+    <p>We may update these Terms from time to time. When we make material changes, we will notify you by email or by a prominent notice in the Service at least 15 days before the changes take effect.</p>
+    <p>Your continued use of the Service after the effective date of the updated Terms constitutes your acceptance of the changes. If you disagree with the updated Terms, you must stop using the Service and cancel your Subscription before the effective date.</p>
+  </section>
+
+  <!-- 21 -->
+  <section class="section" id="s21">
+    <h2>21. Dispute Resolution</h2>
+    <h3>Informal Resolution</h3>
+    <p>Before filing any formal dispute, both parties agree to attempt to resolve the matter informally by contacting <a href="mailto:legal@syncop.app">legal@syncop.app</a>. We will try in good faith to resolve any dispute within 30 days of receiving notice.</p>
+    <h3>Binding Arbitration (US Customers)</h3>
+    <p>If informal resolution fails, any dispute, claim, or controversy arising out of or relating to these Terms or the Service will be resolved by binding arbitration administered by JAMS under its Streamlined Arbitration Rules, except that either party may seek injunctive relief in a court of competent jurisdiction to prevent irreparable harm.</p>
+    <h3>Class Action Waiver</h3>
+    <p>YOU AGREE THAT ANY DISPUTE RESOLUTION PROCEEDINGS WILL BE CONDUCTED ONLY ON AN INDIVIDUAL BASIS AND NOT IN A CLASS, CONSOLIDATED, OR REPRESENTATIVE ACTION. If this waiver is deemed unenforceable, then the arbitration clause above does not apply.</p>
+    <h3>EU/UK Customers</h3>
+    <p>If you are located in the EU or UK, the above arbitration clause does not apply. Disputes will be resolved under the governing law provisions in Section 22.</p>
+  </section>
+
+  <!-- 22 -->
+  <section class="section" id="s22">
+    <h2>22. Governing Law</h2>
+    <p>These Terms are governed by the laws of the State of Delaware, United States, without regard to its conflict-of-laws provisions. Subject to Section 21, each party submits to the exclusive jurisdiction of the state and federal courts located in Delaware for the resolution of any dispute.</p>
+    <p>If you are located in the EU or UK, nothing in this section limits your rights under mandatory applicable consumer protection laws in your country of residence.</p>
+  </section>
+
+  <!-- 23 -->
+  <section class="section" id="s23">
+    <h2>23. General Provisions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Provision</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Entire Agreement</strong></td>
+          <td>These Terms, the Privacy Policy, and any order forms constitute the entire agreement between the parties and supersede all prior discussions, representations, or agreements relating to their subject matter.</td>
+        </tr>
+        <tr>
+          <td><strong>Severability</strong></td>
+          <td>If any provision is found unenforceable, it will be modified to the minimum extent necessary to make it enforceable, and the remaining provisions will continue in full force.</td>
+        </tr>
+        <tr>
+          <td><strong>Waiver</strong></td>
+          <td>A party's failure to enforce any right under these Terms is not a waiver of that right. Any waiver must be in writing and signed by an authorized representative.</td>
+        </tr>
+        <tr>
+          <td><strong>Assignment</strong></td>
+          <td>You may not assign these Terms or your account without our prior written consent. Syncop may assign these Terms in connection with a merger, acquisition, or sale of substantially all of its assets, with notice to you.</td>
+        </tr>
+        <tr>
+          <td><strong>Force Majeure</strong></td>
+          <td>Neither party will be liable for delays or failures caused by circumstances beyond their reasonable control, including natural disasters, war, government actions, or widespread internet failures.</td>
+        </tr>
+        <tr>
+          <td><strong>Notices</strong></td>
+          <td>Legal notices to Syncop must be sent to legal@syncop.app. Notices to you will be sent to the email address on your account. Notices are effective upon confirmed delivery.</td>
+        </tr>
+        <tr>
+          <td><strong>No Third-Party Beneficiaries</strong></td>
+          <td>These Terms do not confer any rights or remedies on any third party except as expressly set out herein.</td>
+        </tr>
+        <tr>
+          <td><strong>Independent Contractors</strong></td>
+          <td>The parties are independent contractors. Nothing in these Terms creates a partnership, joint venture, agency, or employment relationship between the parties.</td>
+        </tr>
+        <tr>
+          <td><strong>Export Compliance</strong></td>
+          <td>You agree to comply with all applicable export control laws and regulations and will not use the Service in any country or region subject to a US embargo or sanctions program.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 24 -->
+  <section class="section" id="s24">
+    <h2>24. Contact</h2>
+    <p>If you have questions about these Terms, please contact us:</p>
+    <ul>
+      <li><strong>Email:</strong> <a href="mailto:legal@syncop.app">legal@syncop.app</a></li>
+      <li><strong>Website:</strong> <a href="https://syncop.app">syncop.app</a></li>
+    </ul>
+    <p>For privacy-related requests, please contact <a href="mailto:privacy@syncop.app">privacy@syncop.app</a>.</p>
+  </section>
+
+  <hr />
+  <p style="font-size:13px;color:var(--text-dim);text-align:center;">© 2026 Syncop. All rights reserved. &nbsp;·&nbsp; <a href="privacy.html" style="color:var(--text-dim)">Privacy Policy</a></p>
+</main>
+
+<footer>
+  <a href="/" class="nav-logo" aria-label="Syncop home">
+    <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="url(#fb)"/>
+      <path d="M8 20C8 20 10 14 16 14C22 14 24 8 24 8" stroke="url(#fs)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="2.5" fill="url(#fd)"/>
+      <defs>
+        <linearGradient id="fb" x1="0" y1="0" x2="32" y2="32">
+          <stop offset="0%" stop-color="#1a0a3e"/>
+          <stop offset="100%" stop-color="#0a1a30"/>
+        </linearGradient>
+        <linearGradient id="fs" x1="8" y1="8" x2="24" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#7c5cfc"/>
+          <stop offset="100%" stop-color="#0ee8c0"/>
+        </linearGradient>
+        <radialGradient id="fd" cx="50%" cy="50%">
+          <stop offset="0%" stop-color="#0ee8c0"/>
+          <stop offset="100%" stop-color="#38bdf8"/>
+        </radialGradient>
+      </defs>
+    </svg>
+    <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text-primary);">Syncop</span>
+  </a>
+  <ul class="footer-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="privacy.html">Privacy</a></li>
+    <li><a href="terms.html">Terms</a></li>
+    <li><a href="mailto:hello@syncop.app">Contact</a></li>
+  </ul>
+  <p class="footer-copy">© 2026 Syncop. All rights reserved.</p>
+</footer>
+
+</body>
+</html>

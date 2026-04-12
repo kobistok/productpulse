@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Syncop</title>
+  <meta name="description" content="Syncop Privacy Policy. Learn how we collect, use, and protect your data." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://syncop.app/privacy" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black:   #080808;
+      --surface: #111111;
+      --violet:  #7c5cfc;
+      --violet-l:#a78bfa;
+      --teal:    #2dd4bf;
+      --text-1:  #f5f5f5;
+      --text-2:  #a3a3a3;
+      --text-3:  #525252;
+      --border:  rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.12);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--black);
+      color: var(--text-1);
+      line-height: 1.7;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* blob */
+    .blob { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; opacity: 0.25; }
+    .blob-1 { width: 600px; height: 400px; background: radial-gradient(ellipse, #5b3fd1 0%, transparent 70%); top: -120px; left: -80px; }
+    .blob-2 { width: 400px; height: 300px; background: radial-gradient(ellipse, #0f766e 0%, transparent 70%); top: 300px; right: -80px; }
+
+    /* nav */
+    nav {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 10px 16px 10px 20px;
+      background: rgba(12,12,12,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      width: min(92vw, 680px);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+    .nav-logo-text { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 16px; color: var(--text-1); letter-spacing: -0.02em; }
+    .btn-nav { padding: 8px 20px; background: #fff; color: #080808; font-size: 13.5px; font-weight: 600; border-radius: 999px; text-decoration: none; transition: opacity 0.15s; white-space: nowrap; }
+    .btn-nav:hover { opacity: 0.85; }
+
+    /* layout */
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 108px 24px 96px;
+      position: relative;
+      z-index: 1;
+    }
+    .doc-header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .doc-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--violet-l);
+      margin-bottom: 12px;
+    }
+    .doc-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: #fff;
+      margin-bottom: 14px;
+      line-height: 1.1;
+    }
+    .doc-meta { font-size: 13px; color: var(--text-3); }
+    .doc-meta a { color: var(--teal); text-decoration: none; }
+    .doc-meta a:hover { text-decoration: underline; }
+
+    /* toc */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 52px;
+    }
+    .toc h2 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 24px;
+    }
+    .toc li { counter-increment: toc; font-size: 13px; margin-bottom: 7px; }
+    .toc li::before { content: counter(toc) ". "; color: var(--text-3); font-weight: 600; }
+    .toc a { color: var(--text-2); text-decoration: none; }
+    .toc a:hover { color: var(--teal); }
+
+    /* sections */
+    .section { margin-bottom: 48px; }
+    .section h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+      color: var(--text-1);
+      padding-top: 8px;
+    }
+    .section h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-1);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    .section p { font-size: 14.5px; color: var(--text-2); margin-bottom: 14px; line-height: 1.7; }
+    .section p strong { color: var(--text-1); font-weight: 600; }
+    .section ul, .section ol { padding-left: 20px; margin-bottom: 14px; }
+    .section li { font-size: 14.5px; color: var(--text-2); margin-bottom: 6px; line-height: 1.65; }
+    .section li strong { color: var(--text-1); }
+    .section a { color: var(--teal); text-decoration: none; }
+    .section a:hover { text-decoration: underline; }
+
+    /* callouts */
+    .callout {
+      background: rgba(124,92,252,0.07);
+      border: 1px solid rgba(124,92,252,0.18);
+      border-left: 3px solid var(--violet);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 13.5px;
+      color: var(--text-2);
+    }
+    .callout strong { color: var(--text-1); }
+    .callout-teal { background: rgba(45,212,191,0.06); border-color: rgba(45,212,191,0.18); border-left-color: var(--teal); }
+
+    /* tables */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0 24px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    th { text-align: left; padding: 10px 14px; background: rgba(255,255,255,0.04); color: var(--text-3); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; color: var(--text-2); border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+    td strong { color: var(--text-1); }
+    tr:last-child td { border-bottom: none; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    /* footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 760px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 13px; color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text-2); }
+    .footer-copy { font-size: 12px; color: var(--text-3); }
+
+    @media (max-width: 600px) {
+      nav { top: 12px; width: calc(100vw - 32px); padding: 9px 12px 9px 16px; }
+      main { padding: 90px 16px 72px; }
+      .toc ol { grid-template-columns: 1fr; }
+      footer { padding: 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1" aria-hidden="true"></div>
+<div class="blob blob-2" aria-hidden="true"></div>
+
+<nav aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Syncop home">
+    <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="url(#nb)"/>
+      <path d="M8 20C8 20 10 14 16 14C22 14 24 8 24 8" stroke="url(#ns)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M8 24C8 24 11 17 16 17C21 17 24 11 24 11" stroke="url(#ns2)" stroke-width="1.4" stroke-linecap="round" opacity="0.4"/>
+      <circle cx="16" cy="16" r="2.5" fill="url(#nd)"/>
+      <defs>
+        <linearGradient id="nb" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#1a0a3e"/><stop offset="100%" stop-color="#0a1a30"/></linearGradient>
+        <linearGradient id="ns" x1="8" y1="8" x2="24" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient>
+        <linearGradient id="ns2" x1="8" y1="11" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
+        <radialGradient id="nd" cx="50%" cy="50%"><stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#38bdf8"/></radialGradient>
+      </defs>
+    </svg>
+    <span class="nav-logo-text">syncop</span>
+  </a>
+  <a href="https://console.syncop.app" class="btn-nav">Log in</a>
+</nav>
+
+<main>
+  <header class="doc-header">
+    <p class="doc-label">Legal</p>
+    <h1 class="doc-title">Privacy Policy</h1>
+    <p class="doc-meta">
+      Effective date: April 8, 2026 &nbsp;·&nbsp; Last updated: April 8, 2026<br/>
+      Questions? Email <a href="mailto:privacy@syncop.app">privacy@syncop.app</a>
+    </p>
+  </header>
+
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#who-we-are">Who we are</a></li>
+      <li><a href="#data-we-collect">Data we collect</a></li>
+      <li><a href="#how-we-use">How we use your data</a></li>
+      <li><a href="#legal-basis">Legal basis (GDPR)</a></li>
+      <li><a href="#ai-and-data">AI and your data</a></li>
+      <li><a href="#sharing">Who we share data with</a></li>
+      <li><a href="#international">International transfers</a></li>
+      <li><a href="#retention">How long we keep data</a></li>
+      <li><a href="#your-rights">Your rights</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#cookies">Cookies</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+    </ol>
+  </div>
+
+  <div class="callout callout-teal">
+    <strong>Plain-English summary:</strong> We collect only what we need to run Syncop. We never sell your data. We never use your code or Jira tickets to train AI models. You can request deletion of your data at any time.
+  </div>
+
+  <!-- 1 -->
+  <section class="section" id="who-we-are">
+    <h2>1. Who we are</h2>
+    <p>Syncop ("Syncop," "we," "us," or "our") operates the Syncop platform at <a href="https://syncop.app">syncop.app</a> and <a href="https://console.syncop.app">console.syncop.app</a>. We provide an AI-powered service that automatically generates weekly product updates from your code repositories, issue tracker, and CI pipeline data.</p>
+    <p>For the purposes of the GDPR, Syncop is the <strong>data controller</strong> of personal data it collects directly from users. When you connect Syncop to your GitHub, GitLab, or Jira workspace, Syncop acts as a <strong>data processor</strong> on your behalf — processing data you control according to your instructions and our <a href="mailto:privacy@syncop.app">Data Processing Addendum (DPA)</a>, available on request.</p>
+    <p><strong>Contact:</strong> For all privacy matters, email <a href="mailto:privacy@syncop.app">privacy@syncop.app</a>.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="section" id="data-we-collect">
+    <h2>2. Data we collect</h2>
+
+    <h3>Account and identity data</h3>
+    <ul>
+      <li>Name and work email address (from sign-up or Google OAuth)</li>
+      <li>Company name and team size (optional, provided during onboarding)</li>
+      <li>Profile information from Google OAuth (name, email, profile photo URL)</li>
+    </ul>
+
+    <h3>Integration credentials</h3>
+    <ul>
+      <li><strong>GitHub / GitLab</strong> — OAuth access and refresh tokens, authorized repo list, webhook signing secrets</li>
+      <li><strong>Jira</strong> — API token or OAuth credentials, workspace domain, project keys</li>
+      <li><strong>CircleCI</strong> — API key (provided directly by you, stored encrypted)</li>
+    </ul>
+    <p>All tokens and API keys are stored encrypted at rest. We request only the minimum OAuth scopes needed to read commits and issue data. We never request write access to your repositories.</p>
+
+    <h3>Third-party content you authorize us to access</h3>
+    <p>When you connect an integration, we access and temporarily process:</p>
+    <ul>
+      <li>Git commit messages, commit SHAs, author names, branch names, and repository names</li>
+      <li>Jira ticket titles, descriptions, statuses, assignees, labels, and fix versions</li>
+      <li>CircleCI pipeline statuses and deployment information</li>
+    </ul>
+    <p>This content may include personal data about your employees (e.g., commit author names). You, as the customer, are the data controller for this content; we process it solely to generate your product updates.</p>
+
+    <h3>AI inputs and outputs</h3>
+    <ul>
+      <li>Prompts we construct from your integration data (derived from commits and tickets) and send to our AI provider</li>
+      <li>AI-generated product update text returned by our AI provider</li>
+      <li>Your filter rules and product context descriptions</li>
+    </ul>
+
+    <h3>Usage and technical data</h3>
+    <ul>
+      <li>IP address, browser type, operating system, time zone</li>
+      <li>Pages visited, features used, actions taken, and timestamps</li>
+      <li>Session identifiers and authentication cookies</li>
+      <li>Error logs and performance data</li>
+    </ul>
+
+    <h3>Communications</h3>
+    <ul>
+      <li>Emails and messages you send to our support team</li>
+      <li>Feedback or survey responses you voluntarily submit</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section class="section" id="how-we-use">
+    <h2>3. How we use your data</h2>
+    <p>We use your data to:</p>
+    <ul>
+      <li><strong>Provide the service</strong> — authenticate your account, connect your integrations, run the AI agent, generate and store weekly product updates</li>
+      <li><strong>Improve reliability</strong> — monitor errors, diagnose bugs, and maintain service uptime</li>
+      <li><strong>Communicate with you</strong> — send transactional emails (update notifications, billing receipts), respond to support requests</li>
+      <li><strong>Enforce our terms</strong> — detect and prevent abuse, fraud, or violations of our Acceptable Use Policy</li>
+      <li><strong>Comply with legal obligations</strong> — respond to lawful requests from courts or regulators</li>
+    </ul>
+    <p>We do <strong>not</strong> use your data for advertising, sell it to third parties, or use it to build profiles for marketing purposes.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="section" id="legal-basis">
+    <h2>4. Legal basis for processing (GDPR)</h2>
+    <p>If you are in the European Economic Area (EEA) or United Kingdom, we rely on the following legal bases:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Processing activity</th>
+          <th>Legal basis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Creating and managing your account</td>
+          <td><strong>Contract</strong> — necessary to perform the service you've signed up for</td>
+        </tr>
+        <tr>
+          <td>Accessing integration data (commits, tickets, CI)</td>
+          <td><strong>Contract</strong> — the core service cannot be provided without this</td>
+        </tr>
+        <tr>
+          <td>Generating AI product updates</td>
+          <td><strong>Contract</strong> — this is the primary purpose of the service</td>
+        </tr>
+        <tr>
+          <td>Security monitoring and fraud prevention</td>
+          <td><strong>Legitimate interests</strong> — protecting the platform and our users</td>
+        </tr>
+        <tr>
+          <td>Product analytics and service improvement</td>
+          <td><strong>Legitimate interests</strong> — improving performance and reliability</td>
+        </tr>
+        <tr>
+          <td>Marketing emails (if opted in)</td>
+          <td><strong>Consent</strong> — you can withdraw at any time</td>
+        </tr>
+        <tr>
+          <td>Retaining billing records</td>
+          <td><strong>Legal obligation</strong> — tax and accounting requirements</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 5 -->
+  <section class="section" id="ai-and-data">
+    <h2>5. AI and your data</h2>
+
+    <div class="callout callout-teal">
+      <strong>We do not train AI models on your data.</strong> Your commit messages, Jira tickets, and generated product updates are never used to train or fine-tune any AI model — ours or our provider's.
+    </div>
+
+    <h3>How AI processing works</h3>
+    <p>To generate your product updates, we construct a structured prompt containing anonymized commit data, relevant Jira ticket summaries, and your product context. This prompt is sent to <strong>Anthropic PBC</strong> (makers of Claude) via their commercial API. Anthropic returns the generated text, which we store and display to you.</p>
+
+    <h3>Anthropic as a subprocessor</h3>
+    <p>Anthropic processes your data as a subprocessor under our instructions. Under Anthropic's commercial API terms, they do not use customer API data to train their models. You can review Anthropic's privacy commitments at <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a>.</p>
+
+    <h3>What we send to Anthropic</h3>
+    <p>Prompts sent to Anthropic contain derived summaries of your commit and ticket data — not raw OAuth tokens, credentials, or full repository contents. We minimise the data included in each prompt to what is necessary for generating an accurate update.</p>
+
+    <h3>Automated decision-making</h3>
+    <p>Syncop uses AI to decide whether a given week's activity warrants a product update (based on your filter rule). This is not a decision with significant legal or similarly significant effects on any individual, and no human profiles are created. You can always override any AI decision by re-running or editing an update manually.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="section" id="sharing">
+    <h2>6. Who we share your data with</h2>
+    <p>We share data only with the following categories of third parties, for the stated purposes:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Subprocessor</th>
+          <th>Purpose</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Google Cloud Platform</strong></td>
+          <td>Hosting (Cloud Run), database (Cloud SQL), cloud storage</td>
+          <td>United States</td>
+        </tr>
+        <tr>
+          <td><strong>Anthropic PBC</strong></td>
+          <td>AI text generation (Claude API)</td>
+          <td>United States</td>
+        </tr>
+        <tr>
+          <td><strong>GitHub, Inc.</strong></td>
+          <td>Source code integration (OAuth)</td>
+          <td>United States</td>
+        </tr>
+        <tr>
+          <td><strong>GitLab B.V.</strong></td>
+          <td>Source code integration (OAuth)</td>
+          <td>Netherlands / United States</td>
+        </tr>
+        <tr>
+          <td><strong>Atlassian Pty Ltd</strong></td>
+          <td>Jira integration (OAuth/API)</td>
+          <td>United States / Australia</td>
+        </tr>
+        <tr>
+          <td><strong>CircleCI (HashiCorp)</strong></td>
+          <td>CI/CD pipeline integration</td>
+          <td>United States</td>
+        </tr>
+        <tr>
+          <td><strong>Stripe, Inc.</strong></td>
+          <td>Payment processing and billing</td>
+          <td>United States</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>We may also share data in the following circumstances:</p>
+    <ul>
+      <li><strong>Legal requirements</strong> — if required by a court order, subpoena, or applicable law, we may disclose your data to authorities. Where permitted, we will notify you before doing so.</li>
+      <li><strong>Business transfers</strong> — if Syncop is acquired or merges with another company, your data may be transferred as part of that transaction. We will notify you and you will have the option to delete your account.</li>
+    </ul>
+
+    <p>We <strong>do not sell</strong> your personal data to third parties. We do not share data for cross-context behavioral advertising.</p>
+  </section>
+
+  <!-- 7 -->
+  <section class="section" id="international">
+    <h2>7. International data transfers</h2>
+    <p>Syncop is based in the United States. If you are in the EEA, United Kingdom, or Switzerland, your data is transferred to the US to provide the service.</p>
+    <p>We rely on <strong>Standard Contractual Clauses (SCCs)</strong> approved by the European Commission for transfers from the EEA to the US — including transfers to Google Cloud and Anthropic. A copy of the applicable SCCs is available on request at <a href="mailto:privacy@syncop.app">privacy@syncop.app</a>.</p>
+    <p>For UK users, we rely on the UK International Data Transfer Agreement (IDTA) or UK Addendum to the EU SCCs as applicable.</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="section" id="retention">
+    <h2>8. How long we keep your data</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data category</th>
+          <th>Retention period</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Account and identity data</td>
+          <td>Until account deletion, then purged within 90 days</td>
+        </tr>
+        <tr>
+          <td>OAuth tokens and API keys</td>
+          <td>Deleted immediately upon integration disconnect or account deletion</td>
+        </tr>
+        <tr>
+          <td>Commit and Jira data (used to generate updates)</td>
+          <td>Retained as part of run logs for 12 months, then purged</td>
+        </tr>
+        <tr>
+          <td>Generated product updates</td>
+          <td>Retained until you delete them or delete your account</td>
+        </tr>
+        <tr>
+          <td>Usage and technical logs</td>
+          <td>90 days</td>
+        </tr>
+        <tr>
+          <td>Billing and payment records</td>
+          <td>7 years (legal/tax obligation)</td>
+        </tr>
+        <tr>
+          <td>Support communications</td>
+          <td>3 years from last interaction</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>When retention periods expire, data is permanently deleted or anonymised. You may request earlier deletion — see <a href="#your-rights">Your rights</a> below.</p>
+  </section>
+
+  <!-- 9 -->
+  <section class="section" id="your-rights">
+    <h2>9. Your rights</h2>
+    <p>Depending on your location, you have the following rights over your personal data:</p>
+
+    <h3>For everyone</h3>
+    <ul>
+      <li><strong>Access</strong> — request a copy of the personal data we hold about you</li>
+      <li><strong>Correction</strong> — ask us to fix inaccurate or incomplete data</li>
+      <li><strong>Deletion</strong> — ask us to delete your data (subject to legal retention obligations)</li>
+      <li><strong>Portability</strong> — receive your data in a structured, machine-readable format</li>
+      <li><strong>Withdraw consent</strong> — where processing is based on consent (e.g., marketing emails), you can withdraw at any time</li>
+    </ul>
+
+    <h3>Additional rights for EEA / UK residents (GDPR / UK GDPR)</h3>
+    <ul>
+      <li><strong>Object to processing</strong> based on legitimate interests</li>
+      <li><strong>Restriction</strong> — ask us to pause processing while a dispute is resolved</li>
+      <li><strong>Complain</strong> — lodge a complaint with your local data protection authority (e.g., the ICO in the UK, or your national supervisory authority in the EEA)</li>
+    </ul>
+
+    <h3>Additional rights for California residents (CCPA / CPRA)</h3>
+    <ul>
+      <li><strong>Know</strong> — the categories of personal information we collect and why</li>
+      <li><strong>Delete</strong> — request deletion of your personal information</li>
+      <li><strong>Correct</strong> — request correction of inaccurate personal information</li>
+      <li><strong>Opt out of sale or sharing</strong> — we do not sell or share your data for targeted advertising, but you may submit a request to confirm this</li>
+      <li><strong>Non-discrimination</strong> — we will not discriminate against you for exercising any of these rights</li>
+    </ul>
+
+    <p>To exercise any right, email <a href="mailto:privacy@syncop.app">privacy@syncop.app</a> with "Privacy Request" in the subject line. We will respond within 30 days (or 45 days for California requests). We may ask you to verify your identity before fulfilling a request.</p>
+  </section>
+
+  <!-- 10 -->
+  <section class="section" id="security">
+    <h2>10. Security</h2>
+    <p>We implement industry-standard technical and organisational measures to protect your data, including:</p>
+    <ul>
+      <li>Encryption at rest (AES-256) for all stored credentials and sensitive data</li>
+      <li>Encryption in transit (TLS 1.2+) for all data moving between your browser, our servers, and third-party APIs</li>
+      <li>OAuth tokens stored as encrypted values — never logged or exposed in plaintext</li>
+      <li>Role-based access controls limiting which employees can access customer data</li>
+      <li>Regular dependency updates and security patching</li>
+    </ul>
+    <p>No system is 100% secure. In the event of a data breach that affects your rights and freedoms, we will notify the relevant supervisory authority within <strong>72 hours</strong> and affected users without undue delay, as required by GDPR.</p>
+    <p>To report a security vulnerability, email <a href="mailto:security@syncop.app">security@syncop.app</a>.</p>
+  </section>
+
+  <!-- 11 -->
+  <section class="section" id="cookies">
+    <h2>11. Cookies</h2>
+    <p>We use a minimal set of cookies to operate the service:</p>
+    <ul>
+      <li><strong>Session cookie</strong> (<code>__session</code>) — maintains your logged-in state. Strictly necessary; cannot be opted out of while using the service.</li>
+      <li><strong>CSRF token</strong> — prevents cross-site request forgery attacks. Strictly necessary.</li>
+    </ul>
+    <p>We do not use third-party advertising cookies. If we add analytics cookies in the future, we will update this policy and ask for your consent where required.</p>
+  </section>
+
+  <!-- 12 -->
+  <section class="section" id="changes">
+    <h2>12. Changes to this policy</h2>
+    <p>We may update this Privacy Policy from time to time. When we make material changes, we will notify you by email and update the "Last updated" date at the top of this page. We will give you at least <strong>30 days' notice</strong> before material changes take effect.</p>
+    <p>Continued use of Syncop after a change takes effect constitutes acceptance of the updated policy.</p>
+  </section>
+
+  <hr/>
+  <p style="font-size:13px;color:var(--text-dim);">
+    Also see: <a href="terms.html" style="color:var(--teal);">Terms of Service</a> &nbsp;·&nbsp;
+    Questions: <a href="mailto:privacy@syncop.app" style="color:var(--teal);">privacy@syncop.app</a>
+  </p>
+</main>
+
+<footer aria-label="Site footer">
+  <a href="/" class="nav-logo" style="text-decoration:none;">
+    <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:#4e5a72;">syncop</span>
+  </a>
+  <ul class="footer-links">
+    <li><a href="privacy.html" aria-current="page">Privacy</a></li>
+    <li><a href="terms.html">Terms</a></li>
+    <li><a href="mailto:hello@syncop.app">Contact</a></li>
+  </ul>
+  <p class="footer-copy">© 2026 Syncop. All rights reserved.</p>
+</footer>
+
+</body>
+</html>

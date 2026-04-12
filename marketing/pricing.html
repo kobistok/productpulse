@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing — Syncop</title>
+  <meta name="description" content="Simple, transparent pricing for every team. Start free, scale as you grow. No seat fees, no surprises." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://syncop.app/pricing" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:   #080808;
+      --surface: #111111;
+      --surface2:#181818;
+      --violet:  #7c5cfc;
+      --violet-l:#a78bfa;
+      --teal:    #2dd4bf;
+      --white:   #ffffff;
+      --text-1:  #f5f5f5;
+      --text-2:  #a3a3a3;
+      --text-3:  #525252;
+      --border:  rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--black);
+      color: var(--text-1);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.3;
+    }
+    .blob-1 { width: 600px; height: 400px; background: radial-gradient(ellipse, #5b3fd1 0%, transparent 70%); top: -120px; left: -80px; }
+    .blob-2 { width: 500px; height: 350px; background: radial-gradient(ellipse, #0f766e 0%, transparent 70%); top: 300px; right: -100px; }
+
+    /* ─── Nav ─── */
+    nav {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      padding: 10px 16px 10px 20px;
+      background: rgba(12,12,12,0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      width: min(92vw, 860px);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; flex-shrink: 0; }
+    .nav-logo-text { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 16px; color: var(--text-1); letter-spacing: -0.02em; }
+    .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
+    .nav-links a { padding: 6px 14px; font-size: 13.5px; font-weight: 500; color: var(--text-2); text-decoration: none; border-radius: 999px; transition: color 0.15s, background 0.15s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text-1); background: rgba(255,255,255,0.06); }
+    .btn-nav { padding: 8px 20px; background: var(--white); color: var(--black); font-size: 13.5px; font-weight: 600; border-radius: 999px; text-decoration: none; transition: opacity 0.15s; flex-shrink: 0; }
+    .btn-nav:hover { opacity: 0.85; }
+
+    /* ─── Layout ─── */
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ─── Page header ─── */
+    .page-header {
+      text-align: center;
+      padding: 140px 24px 72px;
+      position: relative;
+      z-index: 1;
+    }
+    .page-tag {
+      display: inline-block;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--violet-l);
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(36px, 5.5vw, 64px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      color: var(--white);
+      margin-bottom: 18px;
+    }
+    .page-header p {
+      font-size: 17px;
+      color: var(--text-2);
+      max-width: 480px;
+      margin: 0 auto 36px;
+      line-height: 1.65;
+    }
+
+    /* ─── Billing toggle ─── */
+    .billing-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      padding: 5px;
+    }
+    .toggle-btn {
+      padding: 7px 20px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .toggle-btn.active { background: var(--white); color: var(--black); }
+    .save-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      background: rgba(45,212,191,0.15);
+      color: var(--teal);
+      border: 1px solid rgba(45,212,191,0.25);
+    }
+
+    /* ─── Plans grid ─── */
+    .plans {
+      padding: 0 0 80px;
+      position: relative;
+      z-index: 1;
+    }
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .plan-card:hover { border-color: var(--border2); }
+
+    .plan-card.featured {
+      border-color: rgba(124,92,252,0.4);
+      background: linear-gradient(160deg, rgba(124,92,252,0.08) 0%, var(--surface) 50%);
+    }
+    .plan-card.featured::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--violet), var(--teal));
+      border-radius: 20px 20px 0 0;
+    }
+
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 99px;
+      margin-bottom: 20px;
+      width: fit-content;
+    }
+    .plan-badge.popular { background: rgba(124,92,252,0.12); color: var(--violet-l); border: 1px solid rgba(124,92,252,0.25); }
+    .plan-badge.free-badge { background: rgba(255,255,255,0.06); color: var(--text-3); border: 1px solid var(--border); }
+    .plan-badge.scale-badge { background: rgba(45,212,191,0.08); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+    .plan-badge.enterprise-badge { background: rgba(255,255,255,0.04); color: var(--text-3); border: 1px solid var(--border); }
+
+    .plan-name {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-1);
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+    .plan-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .plan-price {
+      margin-bottom: 28px;
+    }
+    .price-amount {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .price-amount sup {
+      font-size: 20px;
+      font-weight: 700;
+      vertical-align: super;
+      letter-spacing: 0;
+    }
+    .price-period {
+      font-size: 13px;
+      color: var(--text-3);
+      margin-top: 5px;
+    }
+    .price-annual {
+      font-size: 12px;
+      color: var(--teal);
+      margin-top: 3px;
+      min-height: 16px;
+    }
+    .price-custom {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .plan-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s;
+      margin-bottom: 28px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      width: 100%;
+    }
+    .plan-cta.primary { background: var(--white); color: var(--black); }
+    .plan-cta.primary:hover { opacity: 0.88; transform: translateY(-1px); }
+    .plan-cta.outline { background: transparent; color: var(--text-1); border: 1px solid var(--border2); }
+    .plan-cta.outline:hover { border-color: rgba(255,255,255,0.25); color: var(--white); }
+    .plan-cta.violet-btn { background: linear-gradient(135deg, var(--violet), #5a3fd1); color: var(--white); box-shadow: 0 0 24px rgba(124,92,252,0.3); }
+    .plan-cta.violet-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .plan-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 24px; }
+
+    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .plan-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
+    .plan-feature .check {
+      flex-shrink: 0;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .check.yes { background: rgba(45,212,191,0.12); color: var(--teal); font-size: 9px; }
+    .check.no  { background: rgba(255,255,255,0.04); color: var(--text-3); font-size: 10px; }
+    .plan-feature strong { color: var(--text-1); font-weight: 600; }
+    .plan-feature-section {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-top: 6px;
+      padding-bottom: 4px;
+    }
+
+    /* ─── Comparison table ─── */
+    .comparison {
+      padding: 80px 0 100px;
+      position: relative;
+      z-index: 1;
+    }
+    .comparison-header { text-align: center; margin-bottom: 48px; }
+    .comparison-header h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(24px, 3.5vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: var(--white);
+      margin-bottom: 10px;
+    }
+    .comparison-header p { font-size: 15px; color: var(--text-2); }
+
+    .comp-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      table-layout: fixed;
+    }
+    .comp-table col.feature-col { width: 34%; }
+    .comp-table col.plan-col    { width: 16.5%; }
+
+    .comp-table thead tr {
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border2);
+    }
+    .comp-table th {
+      padding: 16px 20px;
+      font-weight: 700;
+      color: var(--text-3);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .comp-table th:first-child { text-align: left; }
+    .comp-table th.th-featured { color: var(--violet-l); background: rgba(124,92,252,0.06); }
+
+    .comp-table td {
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text-2);
+      vertical-align: middle;
+      text-align: center;
+    }
+    .comp-table td:first-child { text-align: left; color: var(--text-2); }
+    .comp-table tr:last-child td { border-bottom: none; }
+    .comp-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .comp-table tbody tr:hover td.td-featured { background: rgba(124,92,252,0.08); }
+
+    .td-featured { background: rgba(124,92,252,0.04); }
+
+    .comp-table .section-row {
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    .comp-table .section-row td {
+      padding: 8px 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      text-align: left;
+    }
+    .comp-table .section-row td.td-featured {
+      background: rgba(124,92,252,0.06);
+    }
+
+    .tick  { color: var(--teal);     font-size: 14px; line-height: 1; }
+    .cross { color: var(--text-3);   font-size: 12px; line-height: 1; }
+    .comp-table td span:not(.tick):not(.cross) { font-size: 12.5px; }
+
+    /* ─── FAQ ─── */
+    .faq { padding: 0 0 100px; position: relative; z-index: 1; }
+    .faq-header { text-align: center; margin-bottom: 48px; }
+    .faq-header h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(24px, 3.5vw, 36px); font-weight: 800; letter-spacing: -0.035em; color: var(--white); margin-bottom: 10px; }
+    .faq-header p { font-size: 15px; color: var(--text-2); }
+
+    .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      width: 100%; background: none; border: none;
+      padding: 20px 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14.5px; font-weight: 600;
+      color: var(--text-1); cursor: pointer; text-align: left; transition: color 0.15s;
+    }
+    .faq-q:hover { color: var(--white); }
+    .faq-chevron { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-3); transition: transform 0.2s, border-color 0.2s; }
+    .faq-item.open .faq-chevron { transform: rotate(45deg); border-color: rgba(255,255,255,0.2); }
+    .faq-a { display: none; padding: 0 0 20px; font-size: 13.5px; color: var(--text-2); line-height: 1.7; }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ─── CTA ─── */
+    .cta-section { padding: 0 24px 120px; text-align: center; position: relative; z-index: 1; }
+    .cta-box { max-width: 560px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border2); border-radius: 24px; padding: 56px 40px; position: relative; overflow: hidden; }
+    .cta-box::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(124,92,252,0.1) 0%, transparent 65%); pointer-events: none; }
+    .cta-box h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(22px, 3.5vw, 32px); font-weight: 800; letter-spacing: -0.035em; color: var(--white); margin-bottom: 12px; }
+    .cta-box p { font-size: 15px; color: var(--text-2); margin-bottom: 28px; line-height: 1.65; }
+    .cta-btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 28px; background: var(--white); color: var(--black); font-size: 14px; font-weight: 600; border-radius: 999px; text-decoration: none; transition: opacity 0.15s; }
+    .cta-btn:hover { opacity: 0.88; }
+
+    /* ─── Footer ─── */
+    footer { border-top: 1px solid var(--border); padding: 32px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 13px; color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text-2); }
+    .footer-copy { font-size: 12px; color: var(--text-3); }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    /* ─── Mobile ─── */
+    @media (max-width: 900px) {
+      nav { top: 12px; width: calc(100vw - 32px); padding: 10px 12px 10px 16px; }
+      .nav-links { display: none; }
+      .plans-grid { grid-template-columns: 1fr 1fr; }
+      .faq-grid { grid-template-columns: 1fr; }
+      .comp-table { font-size: 12px; }
+      .comp-table th, .comp-table td { padding: 10px 12px; }
+    }
+    @media (max-width: 600px) {
+      .page-header { padding: 110px 16px 48px; }
+      .plans-grid { grid-template-columns: 1fr; }
+      .cta-box { padding: 40px 24px; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1" aria-hidden="true"></div>
+<div class="blob blob-2" aria-hidden="true"></div>
+
+<!-- ─── Nav ─── -->
+<nav aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Syncop home">
+    <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="url(#n-bg)"/>
+      <path d="M8 20C8 20 10 14 16 14C22 14 24 8 24 8" stroke="url(#n-s1)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M8 24C8 24 11 17 16 17C21 17 24 11 24 11" stroke="url(#n-s2)" stroke-width="1.4" stroke-linecap="round" opacity="0.4"/>
+      <circle cx="16" cy="16" r="2.5" fill="url(#n-dot)"/>
+      <defs>
+        <linearGradient id="n-bg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#1a0a3e"/><stop offset="100%" stop-color="#0a1a30"/></linearGradient>
+        <linearGradient id="n-s1" x1="8" y1="8" x2="24" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient>
+        <linearGradient id="n-s2" x1="8" y1="11" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
+        <radialGradient id="n-dot" cx="50%" cy="50%"><stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#38bdf8"/></radialGradient>
+      </defs>
+    </svg>
+    <span class="nav-logo-text">syncop</span>
+  </a>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html#how">How it works</a></li>
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="pricing.html" class="active">Pricing</a></li>
+    <li><a href="index.html#faq">FAQ</a></li>
+  </ul>
+  <a href="https://console.syncop.app" class="btn-nav">Log in</a>
+</nav>
+
+<!-- ─── Header ─── -->
+<div class="page-header">
+  <span class="page-tag">Pricing</span>
+  <h1>Simple pricing.<br/>No surprises.</h1>
+  <p>Priced by product lines — not seats. Scale up as your team grows without paying per user.</p>
+  <div class="billing-toggle" role="group" aria-label="Billing period">
+    <button class="toggle-btn active" id="toggle-monthly" onclick="setBilling('monthly')">Monthly</button>
+    <button class="toggle-btn" id="toggle-annual" onclick="setBilling('annual')">
+      Annual
+      <span class="save-badge">Save 25%</span>
+    </button>
+  </div>
+</div>
+
+<!-- ─── Plans ─── -->
+<section class="plans" aria-labelledby="plans-heading">
+  <h2 id="plans-heading" class="sr-only">Pricing plans</h2>
+  <div class="container">
+    <div class="plans-grid">
+
+      <!-- Free -->
+      <div class="plan-card">
+        <span class="plan-badge free-badge">Free</span>
+        <div class="plan-name">Starter</div>
+        <div class="plan-desc">Try Syncop with one product line. No time limit.</div>
+        <div class="plan-price">
+          <div class="price-amount"><sup>$</sup>0</div>
+          <div class="price-period">forever free</div>
+          <div class="price-annual">&nbsp;</div>
+        </div>
+        <a href="https://console.syncop.app" class="plan-cta outline">Get started free</a>
+        <hr class="plan-divider" />
+        <ul class="plan-features">
+          <li class="plan-feature-section">Includes</li>
+          <li class="plan-feature"><span class="check yes">✓</span><span><strong>1 product line</strong></span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Weekly AI-generated updates</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>GitHub or GitLab</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Jira or Linear</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Shareable stakeholder link</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>30-day run history</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>Zendesk KB sync</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>Auto-publish</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>API access</span></li>
+        </ul>
+      </div>
+
+      <!-- Pro (featured) -->
+      <div class="plan-card featured">
+        <span class="plan-badge popular">Most popular</span>
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">For growing teams tracking multiple areas of the product.</div>
+        <div class="plan-price">
+          <div class="price-amount" id="pro-price"><sup>$</sup>49</div>
+          <div class="price-period" id="pro-period">per month</div>
+          <div class="price-annual" id="pro-annual">&nbsp;</div>
+        </div>
+        <a href="https://console.syncop.app" class="plan-cta violet-btn">Start free trial</a>
+        <hr class="plan-divider" />
+        <ul class="plan-features">
+          <li class="plan-feature-section">Everything in Starter, plus</li>
+          <li class="plan-feature"><span class="check yes">✓</span><span><strong>5 product lines</strong></span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span><strong>Zendesk KB sync</strong> — auto-create &amp; update articles</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>CircleCI integration</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Auto-publish option</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Unlimited run history</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Custom filter rules</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Priority email support</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>API access</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>SSO / SAML</span></li>
+        </ul>
+      </div>
+
+      <!-- Scale -->
+      <div class="plan-card">
+        <span class="plan-badge scale-badge">Scale</span>
+        <div class="plan-name">Team</div>
+        <div class="plan-desc">For larger teams managing many products or business units.</div>
+        <div class="plan-price">
+          <div class="price-amount" id="team-price"><sup>$</sup>129</div>
+          <div class="price-period" id="team-period">per month</div>
+          <div class="price-annual" id="team-annual">&nbsp;</div>
+        </div>
+        <a href="https://console.syncop.app" class="plan-cta primary">Start free trial</a>
+        <hr class="plan-divider" />
+        <ul class="plan-features">
+          <li class="plan-feature-section">Everything in Pro, plus</li>
+          <li class="plan-feature"><span class="check yes">✓</span><span><strong>15 product lines</strong></span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>API access</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Slack delivery</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Multiple team members &amp; roles</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Webhook notifications</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Custom branding on shared links</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Dedicated onboarding call</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>SSO / SAML</span></li>
+          <li class="plan-feature"><span class="check no">–</span><span>Custom integrations</span></li>
+        </ul>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="plan-card">
+        <span class="plan-badge enterprise-badge">Enterprise</span>
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-desc">Custom contracts, security reviews, and unlimited scale.</div>
+        <div class="plan-price">
+          <div class="price-custom">Custom</div>
+          <div class="price-period">contact us for a quote</div>
+          <div class="price-annual">&nbsp;</div>
+        </div>
+        <a href="mailto:sales@syncop.app" class="plan-cta outline">Talk to sales</a>
+        <hr class="plan-divider" />
+        <ul class="plan-features">
+          <li class="plan-feature-section">Everything in Team, plus</li>
+          <li class="plan-feature"><span class="check yes">✓</span><span><strong>Unlimited product lines</strong></span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>SSO / SAML</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Custom integrations</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Dedicated success manager</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>SLA &amp; uptime guarantee</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Security &amp; compliance review</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Custom data retention policy</span></li>
+          <li class="plan-feature"><span class="check yes">✓</span><span>Invoice billing &amp; PO support</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── Comparison table ─── -->
+<section class="comparison" aria-labelledby="comp-heading">
+  <div class="container">
+    <div class="comparison-header">
+      <h2 id="comp-heading">Compare plans</h2>
+      <p>Everything side by side, so you can pick the right fit.</p>
+    </div>
+    <div class="comp-wrap">
+      <table class="comp-table">
+        <colgroup>
+          <col class="feature-col" />
+          <col class="plan-col" />
+          <col class="plan-col" />
+          <col class="plan-col" />
+          <col class="plan-col" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Starter</th>
+            <th class="th-featured">Pro</th>
+            <th>Team</th>
+            <th>Enterprise</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="section-row">
+            <td>Core</td>
+            <td></td><td class="td-featured"></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td>Product lines</td>
+            <td>1</td>
+            <td class="td-featured">5</td>
+            <td>15</td>
+            <td>Unlimited</td>
+          </tr>
+          <tr>
+            <td>Weekly AI-generated updates</td>
+            <td><span class="tick">✓</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Manual re-run</td>
+            <td><span class="tick">✓</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Shareable stakeholder link</td>
+            <td><span class="tick">✓</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Run history</td>
+            <td>30 days</td>
+            <td class="td-featured">Unlimited</td>
+            <td>Unlimited</td>
+            <td>Unlimited</td>
+          </tr>
+
+          <tr class="section-row">
+            <td>Integrations</td>
+            <td></td><td class="td-featured"></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td>GitHub / GitLab</td>
+            <td><span class="tick">✓</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Jira / Linear</td>
+            <td><span class="tick">✓</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>CircleCI</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Zendesk KB sync</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Slack delivery</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Custom integrations</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+
+          <tr class="section-row">
+            <td>Configuration</td>
+            <td></td><td class="td-featured"></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td>Custom filter rules</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Auto-publish</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Custom branding on shared links</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Webhook notifications</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>API access</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+
+          <tr class="section-row">
+            <td>Security &amp; Admin</td>
+            <td></td><td class="td-featured"></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td>Team members &amp; roles</td>
+            <td>1 user</td>
+            <td class="td-featured">Up to 5</td>
+            <td>Up to 25</td>
+            <td>Unlimited</td>
+          </tr>
+          <tr>
+            <td>SSO / SAML</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Custom data retention</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>SLA &amp; uptime guarantee</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+
+          <tr class="section-row">
+            <td>Support</td>
+            <td></td><td class="td-featured"></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td>Email support</td>
+            <td>Community</td>
+            <td class="td-featured">Priority</td>
+            <td>Priority</td>
+            <td>Dedicated</td>
+          </tr>
+          <tr>
+            <td>Onboarding call</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+          <tr>
+            <td>Dedicated success manager</td>
+            <td><span class="cross">–</span></td>
+            <td class="td-featured"><span class="cross">–</span></td>
+            <td><span class="cross">–</span></td>
+            <td><span class="tick">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FAQ ─── -->
+<section class="faq" aria-labelledby="faq-heading">
+  <div class="container">
+    <div class="faq-header">
+      <h2 id="faq-heading">Pricing questions</h2>
+      <p>Still unsure? Email us at <a href="mailto:hello@syncop.app" style="color:var(--violet-l);text-decoration:none;">hello@syncop.app</a></p>
+    </div>
+    <div class="faq-grid">
+      <ul style="list-style:none">
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">What counts as a product line?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">A product line is one tracked area of your product — for example "Checkout", "Mobile App", or "API Platform". Each has its own connected repos, issue tracker, and generates its own weekly update. You can create and archive product lines at any time.</div>
+        </li>
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">Is there a free trial on paid plans?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">Yes. Pro and Team plans both include a 14-day free trial — no credit card required to start. You only get charged when the trial ends and you choose to continue.</div>
+        </li>
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">Can I change plans later?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">Yes, upgrade or downgrade at any time. Upgrades take effect immediately and are prorated. Downgrades take effect at the start of the next billing cycle.</div>
+        </li>
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">How does annual billing work?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">Annual plans are billed as a single payment at the start of each year. You save 25% compared to monthly billing. If you cancel mid-year, unused months are refunded on a pro-rata basis.</div>
+        </li>
+      </ul>
+      <ul style="list-style:none">
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">Do you charge per seat?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">No. Syncop is priced by product lines, not seats. The only seat limit is how many team members can access your account — and even that is generous on every plan.</div>
+        </li>
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">What happens when I hit my product line limit?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">You'll be prompted to upgrade when you try to create a product line beyond your plan limit. Existing product lines always keep running — nothing gets paused or locked.</div>
+        </li>
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">Is the Zendesk integration included in all plans?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">Zendesk KB sync is available on Pro and above. On Starter, updates are generated but not pushed to Zendesk. Upgrading to Pro takes effect immediately and you can connect Zendesk right away.</div>
+        </li>
+        <li class="faq-item">
+          <button class="faq-q" aria-expanded="false">What payment methods do you accept?<span class="faq-chevron" aria-hidden="true">+</span></button>
+          <div class="faq-a" role="region">We accept all major credit and debit cards via Stripe. Enterprise customers can pay by invoice or purchase order. We support USD billing; other currencies on request.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section class="cta-section" aria-labelledby="cta-heading">
+  <div class="cta-box">
+    <h2 id="cta-heading">Start free today.</h2>
+    <p>One product line, no time limit, no credit card. Upgrade when you're ready.</p>
+    <a href="https://console.syncop.app" class="cta-btn">
+      Get started free
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ─── Footer ─── -->
+<footer aria-label="Site footer">
+  <a href="index.html" class="nav-logo" style="text-decoration:none;">
+    <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="url(#f-bg)"/>
+      <path d="M8 20C8 20 10 14 16 14C22 14 24 8 24 8" stroke="url(#f-s)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="2.5" fill="url(#f-dot)"/>
+      <defs>
+        <linearGradient id="f-bg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#1a0a3e"/><stop offset="100%" stop-color="#0a1a30"/></linearGradient>
+        <linearGradient id="f-s" x1="8" y1="8" x2="24" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7c5cfc"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient>
+        <radialGradient id="f-dot" cx="50%" cy="50%"><stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#38bdf8"/></radialGradient>
+      </defs>
+    </svg>
+    <span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:14px;color:var(--text-3);">syncop</span>
+  </a>
+  <ul class="footer-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="privacy.html">Privacy</a></li>
+    <li><a href="terms.html">Terms</a></li>
+    <li><a href="mailto:hello@syncop.app">Contact</a></li>
+  </ul>
+  <p class="footer-copy">© 2026 Syncop. All rights reserved.</p>
+</footer>
+
+<script>
+  // Billing toggle
+  const prices = {
+    pro:  { monthly: '$49', annual: '$37' },
+    team: { monthly: '$129', annual: '$97' },
+  };
+
+  function setBilling(mode) {
+    const isAnnual = mode === 'annual';
+    document.getElementById('toggle-monthly').classList.toggle('active', !isAnnual);
+    document.getElementById('toggle-annual').classList.toggle('active', isAnnual);
+
+    const proPrice  = document.getElementById('pro-price');
+    const teamPrice = document.getElementById('team-price');
+    const proAnnual  = document.getElementById('pro-annual');
+    const teamAnnual = document.getElementById('team-annual');
+
+    if (isAnnual) {
+      proPrice.innerHTML  = '<sup>$</sup>37';
+      teamPrice.innerHTML = '<sup>$</sup>97';
+      proAnnual.textContent  = 'Billed $444/yr — save $144';
+      teamAnnual.textContent = 'Billed $1,164/yr — save $384';
+    } else {
+      proPrice.innerHTML  = '<sup>$</sup>49';
+      teamPrice.innerHTML = '<sup>$</sup>129';
+      proAnnual.textContent  = '\u00a0';
+      teamAnnual.textContent = '\u00a0';
+    }
+  }
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(i => {
+        i.classList.remove('open');
+        i.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+      });
+      if (!isOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+</script>
+</body>
+</html>
