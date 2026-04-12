@@ -1,8 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Trash2, Telescope } from "lucide-react";
+import { ChevronRight, ChevronDown, Trash2, Telescope, Download } from "lucide-react";
 import { LocalTime } from "./local-time";
+
+// ── Inline banner per section ──────────────────────────────────────────────
+
+function SectionBanner({
+  updateId,
+  sectionIndex,
+  headline,
+}: {
+  updateId: string;
+  sectionIndex: number;
+  headline: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+  const url = `/api/updates/${updateId}/banner?s=${sectionIndex}`;
+  const filename = `syncop-${headline.slice(0, 30).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`;
+
+  if (errored) return null;
+
+  return (
+    <div className="relative group/banner overflow-hidden rounded-t-lg" style={{ aspectRatio: "3 / 1" }}>
+      {/* Shimmer while loading */}
+      {!loaded && (
+        <div className="absolute inset-0 bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 animate-pulse" />
+      )}
+      <img
+        src={url}
+        alt={headline}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        onLoad={() => setLoaded(true)}
+        onError={() => setErrored(true)}
+      />
+      {/* Hover download button */}
+      {loaded && (
+        <a
+          href={url}
+          download={filename}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-2 right-2 opacity-0 group-hover/banner:opacity-100 transition-opacity flex items-center gap-1.5 bg-black/50 hover:bg-black/70 text-white text-[10px] font-medium px-2 py-1 rounded-md backdrop-blur-sm"
+          title="Download banner"
+        >
+          <Download size={10} />
+          PNG
+        </a>
+      )}
+    </div>
+  );
+}
 
 interface ParsedSection {
   headline: string;
@@ -86,11 +134,13 @@ function InlineMeta({ text, jiraBaseUrl, timestamp }: { text: string; jiraBaseUr
 export function UpdateContent({
   content,
   jiraBaseUrl,
+  updateId,
   onDeleteSection,
   onExploreSection,
 }: {
   content: string;
   jiraBaseUrl?: string;
+  updateId?: string;
   onDeleteSection?: (index: number, headline: string) => void;
   onExploreSection?: (sectionContent: string, headline: string) => void;
 }) {
@@ -124,6 +174,13 @@ export function UpdateContent({
         const isExpanded = expanded.has(i);
         return (
           <div key={i} className="group rounded-lg border border-zinc-100 overflow-hidden">
+            {updateId && (
+              <SectionBanner
+                updateId={updateId}
+                sectionIndex={section.originalIndex}
+                headline={section.headline}
+              />
+            )}
             <div className="flex items-stretch bg-white">
               <button
                 type="button"
