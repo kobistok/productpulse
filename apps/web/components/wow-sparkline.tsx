@@ -87,7 +87,7 @@ export function WowSparklineChart({ data }: { data: WowDataPoint[] }) {
             strokeLinejoin="round"
           />
 
-          {/* Hover crosshair */}
+          {/* Hover crosshair — vertical lines are unaffected by x/y scale distortion */}
           {hovered !== null && (
             <line
               x1={xs[hovered]} y1={padY / 2}
@@ -97,32 +97,36 @@ export function WowSparklineChart({ data }: { data: WowDataPoint[] }) {
               strokeDasharray="4 3"
             />
           )}
-
-          {/* Data points */}
-          {xs.map((x, i) => {
-            const active = hovered === i;
-            const latest = data[i].isLatest;
-            return (
-              <g key={i}>
-                {/* Outer ring on hover / latest */}
-                {(active || latest) && (
-                  <circle
-                    cx={x} cy={ys[i]}
-                    r={active ? 10 : 7}
-                    fill={active ? "rgba(124,58,237,0.12)" : "rgba(124,58,237,0.08)"}
-                  />
-                )}
-                <circle
-                  cx={x} cy={ys[i]}
-                  r={active ? 5 : latest ? 4.5 : 3.5}
-                  fill={active || latest ? "#7c3aed" : "rgba(124,58,237,0.55)"}
-                  stroke={active ? "white" : "none"}
-                  strokeWidth="2"
-                />
-              </g>
-            );
-          })}
         </svg>
+
+        {/* Dots rendered as HTML so they stay perfectly round under preserveAspectRatio="none" */}
+        {xs.map((x, i) => {
+          const active = hovered === i;
+          const latest = data[i].isLatest;
+          const pctX = `${((x / VW) * 100).toFixed(2)}%`;
+          const pctY = `${((ys[i] / VH) * 100).toFixed(2)}%`;
+          const size = active ? 10 : latest ? 8 : 7;
+          return (
+            <div
+              key={i}
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                left: pctX,
+                top: pctY,
+                width: size,
+                height: size,
+                transform: "translate(-50%, -50%)",
+                background: active || latest ? "#7c3aed" : "rgba(124,58,237,0.5)",
+                boxShadow: active
+                  ? "0 0 0 3px white, 0 0 0 5px rgba(124,58,237,0.3)"
+                  : latest
+                  ? "0 0 0 2px rgba(124,58,237,0.15)"
+                  : "none",
+                transition: "width 80ms, height 80ms, box-shadow 80ms",
+              }}
+            />
+          );
+        })}
 
         {/* Floating tooltip */}
         {hovered !== null && (
