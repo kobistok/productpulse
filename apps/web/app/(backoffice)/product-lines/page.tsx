@@ -2,11 +2,11 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronRight, Zap, Sparkles, Clock, Wrench, Star, TrendingUp } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Plus, ChevronRight, Zap, Sparkles, Clock } from "lucide-react";
 import { getISOWeek, getISOWeekYear, subWeeks } from "date-fns";
 import { BannerPreviewSvg, MiniBannerPreviewSvg, bannerHash } from "@/components/banner-preview-svg";
 import { WowSparklineChart } from "@/components/wow-sparkline";
+import { MetricsDrilldown, type SectionDetail } from "@/components/metrics-drilldown";
 
 // ─── Section classification ───────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ function classifySection(headline: string): "bug" | "feature" | "update" {
   return "update";
 }
 
-function parseAndClassify(content: string): Array<"bug" | "feature" | "update"> {
+function parseAndClassify(content: string): Array<{ type: "bug" | "feature" | "update"; headline: string }> {
   return content
     .split(/\n\n---\n\n|\n---\n/)
     .map((s) => s.trim())
@@ -26,7 +26,8 @@ function parseAndClassify(content: string): Array<"bug" | "feature" | "update"> 
       const source = raw.replace(/^<!--\s*ts:[^\s>]+\s*-->\n?/, "").trimStart();
       const firstLine = source.split("\n")[0] ?? "";
       const m = firstLine.match(/^\*\*(.+)\*\*$/);
-      return classifySection(m?.[1] ?? firstLine);
+      const headline = m?.[1] ?? firstLine;
+      return { type: classifySection(headline), headline };
     });
 }
 
@@ -36,27 +37,6 @@ function extractFirstHeadline(content: string): string {
   const firstLine = source.split("\n")[0] ?? "";
   const m = firstLine.match(/^\*\*(.+)\*\*$/);
   return m?.[1] ?? firstLine;
-}
-
-// ─── Metric card ──────────────────────────────────────────────────────────────
-
-function MetricCard({
-  label, value, icon: Icon, bg, border, text, iconCls,
-}: {
-  label: string; value: number; icon: LucideIcon;
-  bg: string; border: string; text: string; iconCls: string;
-}) {
-  return (
-    <div className={`rounded-xl border px-4 py-4 ${bg} ${border}`}>
-      <div className="flex items-center justify-between mb-3">
-        <p className={`text-xs font-medium ${text} opacity-70`}>{label}</p>
-        <Icon size={14} className={iconCls} />
-      </div>
-      <p className={`text-[28px] font-bold leading-none tracking-tight ${text}`}>
-        {value.toLocaleString()}
-      </p>
-    </div>
-  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -114,7 +94,8 @@ export default async function ProductLinesPage() {
     // All updates (for metrics + WoW computation)
     prisma.update.findMany({
       where: { productLine: { orgId } },
-      select: { content: true, isoWeek: true, year: true },
+      select: { content: true, isoWeek: true, year: true, productLine: { select: { id: true, name: true } } },
+      orderBy: [{ year: "desc" }, { isoWeek: "desc" }],
     }),
     // Latest 2 updates (for banners section)
     prisma.update.findMany({
@@ -129,12 +110,22 @@ export default async function ProductLinesPage() {
   const lastRunMap     = new Map(lastRunsRaw.map((r) => [r.productLineId, r._max.createdAt]));
 
   // ── All-time metrics ─────────────────────────────────────────────────────────
-  let bugFixes = 0; let bigFeatures = 0; let improvements = 0;
+  const bugDetails: SectionDetail[] = [];
+  const improvementDetails: SectionDetail[] = [];
+  const featureDetails: SectionDetail[] = [];
+
   for (const u of allUpdates) {
-    for (const type of parseAndClassify(u.content)) {
-      if (type === "bug") bugFixes++;
-      else if (type === "feature") bigFeatures++;
-      else improvements++;
+    for (const { type, headline } of parseAndClassify(u.content)) {
+      const detail: SectionDetail = {
+        headline,
+        product: u.productLine.name,
+        productLineId: u.productLine.id,
+        week: u.isoWeek,
+        year: u.year,
+      };
+      if (type === "bug") bugDetails.push(detail);
+      else if (type === "feature") featureDetails.push(detail);
+      else improvementDetails.push(detail);
     }
   }
   const totalRuns = totalRunsResult._count.id;
@@ -145,7 +136,7 @@ export default async function ProductLinesPage() {
     const weekUpdates = allUpdates.filter((u) => u.isoWeek === week && u.year === year);
     let sections = 0; let bugs = 0; let features = 0; let improv = 0;
     for (const u of weekUpdates) {
-      for (const type of parseAndClassify(u.content)) {
+      for (const { type } of parseAndClassify(u.content)) {
         sections++;
         if (type === "bug") bugs++;
         else if (type === "feature") features++;
@@ -205,13 +196,13 @@ export default async function ProductLinesPage() {
       </div>
 
       {/* ── All-time metrics ── */}
-      <div className="grid grid-cols-5 gap-3 mb-8">
-        <MetricCard label="Total Runs"        value={totalRuns}           icon={Zap}       bg="bg-blue-50"   border="border-blue-100"   text="text-blue-700"   iconCls="text-blue-400" />
-        <MetricCard label="Updates Generated" value={totalUpdatesCreated} icon={Sparkles}  bg="bg-violet-50" border="border-violet-100" text="text-violet-700" iconCls="text-violet-400" />
-        <MetricCard label="Bug Fixes"         value={bugFixes}            icon={Wrench}    bg="bg-red-50"    border="border-red-100"    text="text-red-700"    iconCls="text-red-400" />
-        <MetricCard label="Improvements"      value={improvements}        icon={TrendingUp} bg="bg-amber-50" border="border-amber-100"  text="text-amber-700"  iconCls="text-amber-400" />
-        <MetricCard label="Major Features"    value={bigFeatures}         icon={Star}      bg="bg-green-50"  border="border-green-100"  text="text-green-700"  iconCls="text-green-400" />
-      </div>
+      <MetricsDrilldown
+        totalRuns={totalRuns}
+        totalUpdatesCreated={totalUpdatesCreated}
+        bugDetails={bugDetails}
+        improvementDetails={improvementDetails}
+        featureDetails={featureDetails}
+      />
 
       {/* ── Week over Week ── */}
       {hasWowData && (
