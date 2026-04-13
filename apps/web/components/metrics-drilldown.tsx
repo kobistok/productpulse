@@ -126,7 +126,7 @@ function DrillCard({
         <p className={`text-[28px] font-bold leading-none tracking-tight ${cfg.cardText}`}>
           {count.toLocaleString()}
         </p>
-        <span className={`text-[10px] font-semibold ${cfg.cardText} opacity-0 group-hover:opacity-60 transition-opacity flex items-center gap-0.5`}>
+        <span className={`text-[10px] font-semibold ${cfg.cardText} opacity-50 group-hover:opacity-80 transition-opacity flex items-center gap-0.5`}>
           View <ChevronRight size={10} />
         </span>
       </div>
