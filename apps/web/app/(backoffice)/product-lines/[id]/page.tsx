@@ -8,10 +8,14 @@ import { UpdatesSection } from "./updates-section";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ week?: string; year?: string }>;
 }
 
-export default async function ProductLineOverviewPage({ params }: Props) {
+export default async function ProductLineOverviewPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { week: weekParam, year: yearParam } = await searchParams;
+  const highlightWeek = weekParam ? parseInt(weekParam, 10) : undefined;
+  const highlightYear = yearParam ? parseInt(yearParam, 10) : undefined;
   const user = await requireSession();
   const orgId = user.memberships[0]?.orgId;
 
@@ -23,7 +27,7 @@ export default async function ProductLineOverviewPage({ params }: Props) {
       jiraConfig: { select: { atlassianDomain: true, baseUrl: true } },
       updates: {
         orderBy: [{ year: "desc" }, { isoWeek: "desc" }],
-        take: 8,
+        take: highlightWeek && highlightYear ? 52 : 8,
       },
     },
   });
@@ -100,6 +104,8 @@ export default async function ProductLineOverviewPage({ params }: Props) {
         jiraBaseUrl={jiraBaseUrl}
         hasAgent={!!productLine.agent}
         hasTriggersConfigured={productLine.gitTriggers.length > 0}
+        highlightWeek={highlightWeek}
+        highlightYear={highlightYear}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UpdateContent } from "@/components/update-content";
 import { LocalTime } from "@/components/local-time";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,8 @@ interface Props {
   jiraBaseUrl?: string;
   hasAgent: boolean;
   hasTriggersConfigured: boolean;
+  highlightWeek?: number;
+  highlightYear?: number;
 }
 
 // Strip the <!-- ts:ISO --> comment that the worker prepends to each section
@@ -64,8 +66,19 @@ export function UpdatesSection({
   jiraBaseUrl,
   hasAgent,
   hasTriggersConfigured,
+  highlightWeek,
+  highlightYear,
 }: Props) {
   const [localUpdates, setLocalUpdates] = useState(updates);
+
+  useEffect(() => {
+    if (!highlightWeek || !highlightYear) return;
+    const el = document.getElementById(`update-w${highlightWeek}-${highlightYear}`);
+    if (el) {
+      // Small delay lets the page finish painting before scrolling
+      setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+    }
+  }, [highlightWeek, highlightYear]);
 
   // Explore state
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -155,7 +168,14 @@ export function UpdatesSection({
       {/* This week */}
       <section>
         <h2 className="text-sm font-semibold text-zinc-900 mb-3">This week (W{currentWeek})</h2>
-        <div className="bg-white border border-zinc-200 rounded-xl p-5">
+        <div
+          id={thisWeekUpdate ? `update-w${thisWeekUpdate.isoWeek}-${thisWeekUpdate.year}` : undefined}
+          className={`bg-white border rounded-xl p-5 transition-all ${
+            thisWeekUpdate && highlightWeek === thisWeekUpdate.isoWeek && highlightYear === thisWeekUpdate.year
+              ? "border-violet-400 ring-2 ring-violet-200"
+              : "border-zinc-200"
+          }`}
+        >
           {thisWeekUpdate ? (
             <>
               <div className="flex items-center gap-2 mb-3">
@@ -195,7 +215,15 @@ export function UpdatesSection({
           <h2 className="text-sm font-semibold text-zinc-900 mb-3">Recent updates</h2>
           <div className="space-y-3">
             {previousUpdates.map((u) => (
-              <div key={u.id} className="bg-white border border-zinc-200 rounded-xl p-5">
+              <div
+                key={u.id}
+                id={`update-w${u.isoWeek}-${u.year}`}
+                className={`bg-white border rounded-xl p-5 transition-all ${
+                  u.isoWeek === highlightWeek && u.year === highlightYear
+                    ? "border-violet-400 ring-2 ring-violet-200"
+                    : "border-zinc-200"
+                }`}
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <p className="text-xs font-medium text-zinc-400">W{u.isoWeek} {u.year}</p>
                   <span className="text-xs text-zinc-300">·</span>

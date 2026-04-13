@@ -213,7 +213,7 @@ function DrillModal({
                     <p className="text-[13px] font-medium text-zinc-900 leading-snug">{item.headline}</p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Link
-                        href={`/product-lines/${item.productLineId}`}
+                        href={`/product-lines/${item.productLineId}?week=${item.week}&year=${item.year}`}
                         onClick={onClose}
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.pillBg} ${cfg.pillText} ${cfg.pillBorder} hover:brightness-95 transition-all`}
                       >
