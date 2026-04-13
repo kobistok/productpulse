@@ -61,6 +61,7 @@ export function WowSparklineChart({ data }: { data: WowDataPoint[] }) {
       <div className="relative" style={{ cursor: "crosshair" }}>
         <svg
           viewBox={`0 0 ${VW} ${VH}`}
+          preserveAspectRatio="none"
           className="w-full block"
           style={{ height: 80 }}
           onMouseMove={handleMouseMove}
