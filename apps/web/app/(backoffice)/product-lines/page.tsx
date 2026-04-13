@@ -6,6 +6,7 @@ import { Plus, ChevronRight, Zap, Sparkles, Clock, Wrench, Star, TrendingUp } fr
 import type { LucideIcon } from "lucide-react";
 import { getISOWeek, getISOWeekYear, subWeeks } from "date-fns";
 import { BannerPreviewSvg, MiniBannerPreviewSvg, bannerHash } from "@/components/banner-preview-svg";
+import { WowSparklineChart } from "@/components/wow-sparkline";
 
 // ─── Section classification ───────────────────────────────────────────────────
 
@@ -55,50 +56,6 @@ function MetricCard({
         {value.toLocaleString()}
       </p>
     </div>
-  );
-}
-
-// ─── WoW sparkline (pure SVG, server-renderable) ──────────────────────────────
-
-function WowSparkline({ values }: { values: number[] }) {
-  const W = 500; const H = 44; const padX = 20; const padY = 10;
-  const n = values.length;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const xs = values.map((_, i) => padX + (i / (n - 1)) * (W - padX * 2));
-  const ys = values.map((v) => H - padY - ((v - min) / range) * (H - padY * 2));
-  const bezier = xs
-    .map((x, i) => {
-      if (i === 0) return `M ${x.toFixed(1)},${ys[i].toFixed(1)}`;
-      const cpx = ((xs[i - 1] + x) / 2).toFixed(1);
-      return `C ${cpx},${ys[i - 1].toFixed(1)} ${cpx},${ys[i].toFixed(1)} ${x.toFixed(1)},${ys[i].toFixed(1)}`;
-    })
-    .join(" ");
-  const area = `${bezier} L ${xs[n - 1].toFixed(1)},${H} L ${xs[0].toFixed(1)},${H} Z`;
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 44 }}>
-      <defs>
-        <linearGradient id="wow-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="rgba(139,92,246,0.18)" />
-          <stop offset="100%" stopColor="rgba(139,92,246,0)" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#wow-fill)" />
-      <path d={bezier} fill="none" stroke="rgba(139,92,246,0.65)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {xs.map((x, i) => (
-        <circle
-          key={i}
-          cx={x.toFixed(1)}
-          cy={ys[i].toFixed(1)}
-          r={i === n - 1 ? 4.5 : 3.5}
-          fill={i === n - 1 ? "#7c3aed" : "rgba(139,92,246,0.55)"}
-          stroke={i === n - 1 ? "rgba(124,58,237,0.25)" : "none"}
-          strokeWidth="6"
-        />
-      ))}
-    </svg>
   );
 }
 
@@ -316,16 +273,16 @@ export default async function ProductLinesPage() {
           </div>
 
           {/* Sparkline */}
-          <div className="rounded-xl border border-zinc-100 bg-white px-5 py-3">
-            <WowSparkline values={wowStats.map((w) => w.sections)} />
-            <div className="flex justify-between mt-1 px-[20px]">
-              {wowStats.map((w) => (
-                <span key={`${w.week}-${w.year}-lbl`} className={`text-[10px] ${w.isLatest ? "text-violet-500 font-semibold" : "text-zinc-400"}`}>
-                  {w.label}
-                </span>
-              ))}
-            </div>
-          </div>
+          <WowSparklineChart
+            data={wowStats.map((w) => ({
+              label: w.label,
+              sections: w.sections,
+              features: w.features,
+              bugs: w.bugs,
+              improvements: w.improvements,
+              isLatest: w.isLatest,
+            }))}
+          />
         </div>
       )}
 
