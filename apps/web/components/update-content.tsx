@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronRight, ChevronDown, Trash2, Telescope } from "lucide-react";
 import { LocalTime } from "./local-time";
 import { SectionBanner } from "./section-banner";
+import { BannerPreviewSvg, bannerHash } from "./banner-preview-svg";
 
 interface ParsedSection {
   headline: string;
@@ -88,12 +89,15 @@ export function UpdateContent({
   content,
   jiraBaseUrl,
   updateId,
+  staticBanners,
   onDeleteSection,
   onExploreSection,
 }: {
   content: string;
   jiraBaseUrl?: string;
   updateId?: string;
+  /** When true, renders static SVG banners (no auth needed). When false/absent, uses AI-evaluated banners. */
+  staticBanners?: boolean;
   onDeleteSection?: (index: number, headline: string) => void;
   onExploreSection?: (sectionContent: string, headline: string) => void;
 }) {
@@ -128,11 +132,19 @@ export function UpdateContent({
         return (
           <div key={i} className="group rounded-lg border border-zinc-100 overflow-hidden">
             {updateId && (
-              <SectionBanner
-                updateId={updateId}
-                sectionIndex={section.originalIndex}
-                headline={section.headline}
-              />
+              staticBanners ? (
+                <BannerPreviewSvg
+                  seed={bannerHash(`${updateId}-${section.originalIndex}`)}
+                  uid={`bpv-${updateId.replace(/[^a-z0-9]/gi, "")}-${section.originalIndex}`}
+                  title={section.headline}
+                />
+              ) : (
+                <SectionBanner
+                  updateId={updateId}
+                  sectionIndex={section.originalIndex}
+                  headline={section.headline}
+                />
+              )
             )}
             <div className="flex items-stretch bg-white">
               <button
