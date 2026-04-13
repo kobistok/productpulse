@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Settings, LogOut, Users, X, FileText, Rocket } from "lucide-react";
+import { LayoutGrid, Settings, LogOut, Users, X, FileText, Rocket, LifeBuoy } from "lucide-react";
 import { signOut } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/product-lines", label: "Product Lines", icon: LayoutGrid },
   { href: "/content", label: "Content", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "http://syncop.app/support", label: "Support", icon: LifeBuoy, external: true },
 ];
 
 interface SidebarProps {
@@ -83,13 +84,14 @@ export function Sidebar({ user, org, isSuperAdmin, isImpersonating, realUserName
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 flex flex-col">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+          {NAV_ITEMS.map(({ href, label, icon: Icon, external }) => (
             <Link
               key={href}
               href={href}
+              {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className={cn(
                 "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
-                pathname.startsWith(href)
+                !external && pathname.startsWith(href)
                   ? "bg-zinc-100 text-zinc-900 font-medium"
                   : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
               )}
