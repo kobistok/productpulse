@@ -24,7 +24,17 @@ export async function DELETE(
     return NextResponse.json({ error: "Only the product line creator or an admin can delete it" }, { status: 403 });
   }
 
-  await prisma.productLine.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    // Delete children that lack onDelete: Cascade in the schema (default is Restrict)
+    await tx.update.deleteMany({ where: { productLineId: id } });
+    await tx.agent.deleteMany({ where: { productLineId: id } });
+    await tx.circleCIConfig.deleteMany({ where: { productLineId: id } });
+    await tx.jiraConfig.deleteMany({ where: { productLineId: id } });
+    // GitTrigger.TriggerEvent has onDelete: SetNull for triggerId — safe to delete triggers first
+    await tx.gitTrigger.deleteMany({ where: { productLineId: id } });
+    // TriggerEvents have onDelete: Cascade from ProductLine — deleted automatically below
+    await tx.productLine.delete({ where: { id } });
+  });
 
   return NextResponse.json({ deleted: true });
 }
