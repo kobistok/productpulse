@@ -201,30 +201,33 @@ function DrillModal({
           ) : (
             <div>
               {items.map((item, i) => (
-                <div
+                <Link
                   key={i}
-                  className="flex items-start gap-3 px-5 py-3.5 border-b border-zinc-50 hover:bg-zinc-50/60 transition-colors"
+                  href={`/product-lines/${item.productLineId}?week=${item.week}&year=${item.year}`}
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-5 py-3.5 border-b border-zinc-50 hover:bg-zinc-50 group transition-colors"
                 >
                   {/* Dot */}
-                  <div className={`w-1.5 h-1.5 rounded-full ${cfg.dotColor} mt-[6px] flex-shrink-0`} />
+                  <div className={`w-1.5 h-1.5 rounded-full ${cfg.dotColor} flex-shrink-0`} />
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-zinc-900 leading-snug">{item.headline}</p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Link
-                        href={`/product-lines/${item.productLineId}?week=${item.week}&year=${item.year}`}
-                        onClick={onClose}
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.pillBg} ${cfg.pillText} ${cfg.pillBorder} hover:brightness-95 transition-all`}
-                      >
+                    <p className="text-[13px] font-medium text-zinc-900 leading-snug group-hover:text-zinc-700 transition-colors">
+                      {item.headline}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.pillBg} ${cfg.pillText} ${cfg.pillBorder}`}>
                         {item.product}
-                      </Link>
+                      </span>
                       <span className="text-[11px] text-zinc-400">
                         Week {item.week}, {item.year}
                       </span>
                     </div>
                   </div>
-                </div>
+
+                  {/* Arrow — always visible, brightens on hover */}
+                  <ChevronRight size={14} className="text-zinc-300 group-hover:text-zinc-500 flex-shrink-0 transition-colors" />
+                </Link>
               ))}
             </div>
           )}
