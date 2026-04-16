@@ -5,6 +5,7 @@ import { LocalTime } from "@/components/local-time";
 import { WowSparklineChart } from "@/components/wow-sparkline";
 import { BannerPreviewSvg, bannerHash } from "@/components/banner-preview-svg";
 import { getISOWeek, getISOWeekYear, subWeeks } from "date-fns";
+import { Zap, Sparkles, Wrench, TrendingUp, Star } from "lucide-react";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -75,7 +76,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
         orderBy: [{ year: "desc" }, { isoWeek: "desc" }],
         take: 52,
       },
-      _count: { select: { triggerEvents: true } },
+      _count: { select: { triggerEvents: true, updates: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -88,6 +89,20 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
       ? `https://${selectedPl.jiraConfig.atlassianDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
       : selectedPl.jiraConfig.baseUrl.replace(/\/+$/, "")
     : undefined;
+
+  // ── Metrics for selected product line ────────────────────────────────────────
+  let plBugs = 0; let plFeatures = 0; let plImprovements = 0;
+  if (selectedPl) {
+    for (const u of selectedPl.updates) {
+      for (const type of parseAndClassify(u.content)) {
+        if (type === "bug") plBugs++;
+        else if (type === "feature") plFeatures++;
+        else plImprovements++;
+      }
+    }
+  }
+  const plTotalRuns = selectedPl?._count.triggerEvents ?? 0;
+  const plTotalUpdates = selectedPl?._count.updates ?? 0;
 
   // ── WoW stats for selected product line ────────────────────────────────────
   const now = new Date();
@@ -230,6 +245,29 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
                     </div>
                   </div>
                 )}
+
+                {/* Metrics */}
+                <div className="grid grid-cols-5 gap-3 mb-8">
+                  {(
+                    [
+                      { label: "Total Runs",        value: plTotalRuns,    icon: Zap,       bg: "bg-blue-50",   border: "border-blue-100",   text: "text-blue-700",   iconCls: "text-blue-400" },
+                      { label: "Updates Generated", value: plTotalUpdates, icon: Sparkles,  bg: "bg-violet-50", border: "border-violet-100", text: "text-violet-700", iconCls: "text-violet-400" },
+                      { label: "Bug Fixes",         value: plBugs,         icon: Wrench,    bg: "bg-red-50",    border: "border-red-100",    text: "text-red-700",    iconCls: "text-red-400" },
+                      { label: "Improvements",      value: plImprovements, icon: TrendingUp, bg: "bg-amber-50", border: "border-amber-100",  text: "text-amber-700",  iconCls: "text-amber-400" },
+                      { label: "Major Features",    value: plFeatures,     icon: Star,      bg: "bg-green-50",  border: "border-green-100",  text: "text-green-700",  iconCls: "text-green-400" },
+                    ] as const
+                  ).map(({ label, value, icon: Icon, bg, border, text, iconCls }) => (
+                    <div key={label} className={`rounded-xl border px-4 py-4 ${bg} ${border}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className={`text-xs font-medium ${text} opacity-70`}>{label}</p>
+                        <Icon size={14} className={iconCls} />
+                      </div>
+                      <p className={`text-[28px] font-bold leading-none tracking-tight ${text}`}>
+                        {value.toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
 
                 {/* WoW chart */}
                 {hasWow && (
