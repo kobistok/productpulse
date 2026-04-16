@@ -80,7 +80,8 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
     orderBy: { name: "asc" },
   });
 
-  const selectedPl = productLines.find((pl) => pl.id === plParam) ?? productLines[0];
+  const plsWithUpdates = productLines.filter((pl) => pl.updates.length > 0);
+  const selectedPl = plsWithUpdates.find((pl) => pl.id === plParam) ?? plsWithUpdates[0];
 
   const jiraBaseUrl = selectedPl?.jiraConfig
     ? selectedPl.jiraConfig.atlassianDomain
@@ -153,7 +154,7 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
                 Product Lines
               </p>
             </div>
-            {productLines.map((pl) => {
+            {productLines.filter((pl) => pl.updates.length > 0).map((pl) => {
               const isSelected = pl.id === selectedPl?.id;
               const lastUpdate = pl.updates[0];
               const firstHeadline = lastUpdate ? extractFirstHeadline(lastUpdate.content) : null;
