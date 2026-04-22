@@ -14,7 +14,7 @@ function classifySection(headline: string): "bug" | "feature" | "update" {
   const h = headline.toLowerCase();
   // No-op entries ("no new user-facing changes", "no changes in this release", etc.) → never a feature
   if (/\bno\s+(new|changes?|updates?|user.facing)\b/.test(h)) return "update";
-  if (/\b(fix(es|ed)?|bug|patch(ed)?|hotfix|resolv(es|ed)?|regression|crash)\b/.test(h)) return "bug";
+  if (/\b(fix(es|ed|ing)?|bug|patch(ed)?|hotfix|resolv(es|ed)?|regression|crash)\b/.test(h)) return "bug";
   // Only promote to feature on strong launch/ship signals; drop "released?" (matches "in this release")
   if (/\b(launch(ed)?|major|introduc(es|ed)?|ship(ped)?)\b/.test(h) || /\bnew\s+\w/.test(h)) return "feature";
   return "update";

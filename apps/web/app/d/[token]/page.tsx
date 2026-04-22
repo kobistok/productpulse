@@ -18,7 +18,7 @@ function classifySection(headline: string): "bug" | "feature" | "update" {
   const h = headline.toLowerCase();
   // No-op entries ("no new user-facing changes", "no changes in this release", etc.) → never a feature
   if (/\bno\s+(new|changes?|updates?|user.facing)\b/.test(h)) return "update";
-  if (/\b(fix(es|ed)?|bug|patch(ed)?|hotfix|resolv(es|ed)?|regression|crash)\b/.test(h)) return "bug";
+  if (/\b(fix(es|ed|ing)?|bug|patch(ed)?|hotfix|resolv(es|ed)?|regression|crash)\b/.test(h)) return "bug";
   // Only promote to feature on strong launch/ship signals; drop "released?" (matches "in this release")
   if (/\b(launch(ed)?|major|introduc(es|ed)?|ship(ped)?)\b/.test(h) || /\bnew\s+\w/.test(h)) return "feature";
   return "update";
@@ -132,6 +132,14 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
 
   const hasWow = wowStats.some((w) => w.sections > 0);
 
+  // ── Most-recently-updated product line (for "Latest" badge) ─────────────────
+  const latestPlId = plsWithUpdates.reduce<string | null>((best, pl) => {
+    if (!best) return pl.id;
+    const bestDate = plsWithUpdates.find((p) => p.id === best)!.updates[0]?.updatedAt ?? new Date(0);
+    const plDate = pl.updates[0]?.updatedAt ?? new Date(0);
+    return plDate > bestDate ? pl.id : best;
+  }, null);
+
   // ── Latest update hero banner ───────────────────────────────────────────────
   const latestUpdate = selectedPl?.updates[0];
   const latestHeadline = latestUpdate ? extractFirstHeadline(latestUpdate.content) : null;
@@ -164,57 +172,80 @@ export default async function PublicDashboardPage({ params, searchParams }: Prop
 
           {/* ── Left sidebar ── */}
           <aside className="w-64 border-r border-zinc-200 bg-white flex-shrink-0 overflow-y-auto">
-            <div className="px-4 py-3 border-b border-zinc-100">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                 Product Lines
               </p>
+              <span className="text-[10px] font-semibold text-zinc-400 bg-zinc-100 rounded-full px-1.5 py-0.5">
+                {plsWithUpdates.length}
+              </span>
             </div>
-            {productLines.filter((pl) => pl.updates.length > 0).map((pl) => {
+
+            {plsWithUpdates.map((pl) => {
               const isSelected = pl.id === selectedPl?.id;
+              const isLatest = pl.id === latestPlId;
               const lastUpdate = pl.updates[0];
-              const firstHeadline = lastUpdate ? extractFirstHeadline(lastUpdate.content) : null;
-              const miniSeed = lastUpdate ? bannerHash(`${lastUpdate.id}-0`) : bannerHash(pl.id);
+              const firstHeadline = extractFirstHeadline(lastUpdate.content);
+              const miniSeed = bannerHash(`${lastUpdate.id}-0`);
               const miniUid = `sb-${pl.id.replace(/[^a-z0-9]/gi, "")}`;
+
               return (
                 <a
                   key={pl.id}
                   href={`?pl=${pl.id}`}
-                  className={`block border-b border-zinc-100 transition-colors ${
-                    isSelected ? "bg-violet-50/60" : "hover:bg-zinc-50"
+                  className={`block border-b border-zinc-100 relative transition-colors group ${
+                    isSelected ? "bg-violet-50" : "hover:bg-zinc-50"
                   }`}
                 >
-                  {/* Mini banner thumbnail */}
-                  <div className={`overflow-hidden transition-opacity ${isSelected ? "opacity-100" : "opacity-70 hover:opacity-90"}`}>
-                    <svg
-                      viewBox="0 0 300 70"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-full block"
-                    >
-                      <defs>
-                        <linearGradient id={`sg-${miniUid}`} x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor={getSeedColor(miniSeed, "from")} />
-                          <stop offset="100%" stopColor={getSeedColor(miniSeed, "to")} />
-                        </linearGradient>
-                      </defs>
-                      <rect width="300" height="70" fill={`url(#sg-${miniUid})`} />
-                      <circle cx="240" cy="35" r="55" fill="rgba(255,255,255,0.07)" />
-                      <circle cx="280" cy="65" r="35" fill="rgba(255,255,255,0.05)" />
-                    </svg>
-                  </div>
-                  <div className="px-3 py-2">
-                    <p className={`text-[13px] font-semibold truncate ${isSelected ? "text-violet-800" : "text-zinc-800"}`}>
-                      {pl.name}
-                    </p>
-                    {firstHeadline && (
-                      <p className="text-[11px] text-zinc-400 truncate mt-0.5">{firstHeadline}</p>
-                    )}
-                    {lastUpdate ? (
-                      <p className="text-[10px] text-zinc-400 mt-1">
-                        {formatLastUpdate(lastUpdate.updatedAt)} · {pl.updates.length} update{pl.updates.length !== 1 ? "s" : ""}
+                  {/* Left accent bar */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-[3px] transition-colors rounded-r-full ${
+                    isSelected ? "bg-violet-500" : "bg-transparent group-hover:bg-zinc-200"
+                  }`} />
+
+                  <div className="px-3 pt-3 pb-2.5 pl-4">
+                    {/* Compact gradient banner */}
+                    <div className="rounded-md overflow-hidden mb-2">
+                      <svg viewBox="0 0 300 36" xmlns="http://www.w3.org/2000/svg" className="w-full block">
+                        <defs>
+                          <linearGradient id={`sg-${miniUid}`} x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={getSeedColor(miniSeed, "from")} />
+                            <stop offset="100%" stopColor={getSeedColor(miniSeed, "to")} />
+                          </linearGradient>
+                        </defs>
+                        <rect width="300" height="36" fill={`url(#sg-${miniUid})`} />
+                        <circle cx="240" cy="18" r="40" fill="rgba(255,255,255,0.08)" />
+                        <circle cx="290" cy="36" r="28" fill="rgba(255,255,255,0.05)" />
+                      </svg>
+                    </div>
+
+                    {/* Name + Latest badge */}
+                    <div className="flex items-start justify-between gap-1.5">
+                      <p className={`text-[13px] font-semibold truncate leading-snug flex-1 min-w-0 ${
+                        isSelected ? "text-violet-800" : "text-zinc-800"
+                      }`}>
+                        {pl.name}
                       </p>
-                    ) : (
-                      <p className="text-[10px] text-zinc-300 mt-1 italic">No updates yet</p>
-                    )}
+                      {isLatest && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-violet-500 bg-violet-50 border border-violet-100 rounded-full px-1.5 py-0.5 flex-shrink-0 mt-0.5">
+                          Latest
+                        </span>
+                      )}
+                    </div>
+
+                    {/* First headline */}
+                    <p className="text-[11px] text-zinc-400 truncate mt-0.5 leading-snug">
+                      {firstHeadline}
+                    </p>
+
+                    {/* Metadata */}
+                    <p className={`text-[10px] mt-1.5 ${isSelected ? "text-violet-400" : "text-zinc-400"}`}>
+                      {formatLastUpdate(lastUpdate.updatedAt)}
+                      <span className="mx-1 opacity-50">·</span>
+                      W{lastUpdate.isoWeek}
+                      <span className="mx-1 opacity-50">·</span>
+                      {pl._count.updates} update{pl._count.updates !== 1 ? "s" : ""}
+                    </p>
                   </div>
                 </a>
               );
